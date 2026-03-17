@@ -1,56 +1,52 @@
 /**
  * Pivotal ERP API Documentation — Enhanced Rendering Logic
  * Entity-grouped navigation with collapsible sidebar, Xero-style descriptions.
- * Last Updated: 2026-03-17 16:30
+ * Last Updated: 2026-03-17 17:05
  */
 
 // ─── Entity → Description Map (Xero-style) ───────────────────────────────────
 const ENTITY_DESCRIPTIONS = {
-  "Ledger Group": "Ledger Groups form the backbone of your chart of accounts. They classify every ledger into categories such as Assets, Liabilities, Income, and Expenses. Use these endpoints to retrieve the full hierarchy of groups and to build dynamic account selection UIs.",
-  "Ledger": "Ledgers represent individual account heads — parties, banks, income, or expense accounts. This set of endpoints lets you create, update, search, and retrieve ledger details, including statutory and statutory tax registration information.",
-  "Currency": "The Currency module allows you to manage multi-currency ledger mappings. Retrieve currency names linked to ledgers for use in cross-border transaction flows.",
-  "Salesman": "Salesmen are the primary field-level agents in the ERP. Use these endpoints to retrieve salesman-wise party lists, manage agent profiles, view GPS locations, and map parties to a salesman hierarchy.",
-  "DebtorType": "Debtor Types categorise trade debtors by their channel or business type (e.g., Wholesaler, Retailer). This endpoint supports creation and retrieval of debtor type classifications.",
-  "CreditorType": "Creditor Types help segment vendors and suppliers by category. Manage creditor type definitions through PUT and POST endpoints.",
-  "VoucherMode": "Voucher Modes define payment and receipt channel options such as Cash, Cheque, or Bank Transfer. Use GET-style endpoints to retrieve all configured voucher modes by voucher type.",
-  "BG": "Bank Guarantees (BG) are financial instruments issued in favour of creditors. These endpoints let you create BG records, attach scanned documents, and track status, amount, and expiry details.",
-  "PDC": "Post-Dated Cheques (PDC) track future-dated instruments received from or issued to parties. Save PDC records with cheque details and attach scanned copies through multipart endpoints.",
-  "Receipt": "Receipt vouchers record incoming payments and are a critical component of accounts receivable. Use these endpoints to create receipts with cost-centre allocations, bill references, and TDS/VAT details.",
-  "Journal": "Journal entries are manual accounting adjustments that directly debit and credit ledger accounts. These endpoints support full double-entry journals with multiple ledger lines, narration, and file attachments.",
-  "CashBank": "Cash and Bank Book endpoints return a chronological ledger of all cash and bank transactions within a date range. Use these for reconciliation views and treasury dashboards.",
-  "BankReconcilliation": "Bank Reconciliation matches your ERP bank ledger entries against the physical bank statement. Supply a date range and ledger ID to retrieve outstanding and matched transactions.",
-  "Ledgervoucher": "Ledger Voucher reports return a summarised statement of transactions for a specific ledger account over a period, including opening and closing balances. Used in account statements and party confirmations.",
-  "LedgerVoucherDetails": "Returns the line-level details of every voucher posted against a ledger. Useful for building drill-down views from a ledger summary into the underlying transactions.",
-  "Daybook": "The Day Book is a chronological record of all vouchers posted on a given day across all modules. Filter by branch, voucher type, or posting status to audit daily activity.",
-  "ProductGroup": "Product Groups organise your inventory catalogue into logical brand/category hierarchies. Create group structures and retrieve tree-level summaries for use in inventory reports.",
-  "productCategory": "Product Categories provide a secondary classification layer below Product Groups. Use PUT endpoints to create new category nodes and assign aliases.",
-  "ProductCompany": "Product Company stores the brand or manufacturer of a product. This allows inventory filtering by supplier or brand, and is used in competitor analysis reports.",
-  "Product": "Products are the fundamental inventory units. These endpoints cover full product lifecycle management: creation, rate assignment, opening stock entry, and retrieval of current status and transaction history.",
-  "Unit": "Units of Measure define how products are counted, weighed, or measured. Manage units with decimal precision and aliases via PUT endpoints.",
-  "SalesOrder": "Sales Orders capture confirmed customer orders before billing. Retrieve pending summaries, generate email notifications to agents, and access order-level details for fulfilment workflows.",
-  "SalesInvoice": "Sales Invoices are the primary billing documents. Create abbreviated or full invoices with line items, discounts, VAT/TDS breakdowns, and cost-centre allocations.",
-  "SalesReturn": "Sales Return vouchers record goods returned by customers against a previously issued invoice. Endpoints mirror the Sales Invoice structure with credit-note semantics.",
-  "StockJournalOpening": "Stock Journal Opening endpoints record the initial on-hand inventory quantities and valuation at the start of a fiscal period. Used during year-start setup or branch stock transfers.",
-  "Consumption": "Consumption entries track raw material or stock items consumed in production or operations. Post consumption journals with product, quantity, and godown details.",
-  "Cost Center / Class": "Cost Centers and Classes allow you to track expenses and revenues by department, project, or location. Use these endpoints to retrieve structural dimensions for cost-allocated vouchers.",
-  "Purchase Invoice": "Purchase Invoices record goods or services received from vendors. Manage the full procurement billing cycle: creation, itemization, and statutory tax breakdowns.",
-  // Agent module entities
-  "GPS / Location": "Real-time tracking and geo-location services. Use these endpoints to update salesman positions and retrieve coordinate data for mapping.",
-  "Salesman / Profile": "Agent and salesman profile management. Retrieve agent details, status, and related party mappings.",
-  "Expenses": "Field expense tracking. Manage expense categories and retrieve claim details for salesmen on the go.",
-  "Route Visits": "Monitor field visits and route adherence. Log visit start/end times and track waiting durations at customer outlets.",
-  "Outlet / Customer": "Customer and outlet management for agents. Create new customers and update outlet address or contact details.",
-  // Employee module entities
-  "Leave Management": "End-to-end leave workflow. Request leaves, check balances, and handle approvals for various leave types.",
-  "Attendance": "Time and attendance tracking. Retrieve attendance logs and manage in/out mode configurations.",
-  "Payroll": "Employee compensation and benefits. Access month-wise pay slips and payroll summaries.",
-  "Asset Requests": "Internal request system for company assets. Category-wise asset requests and status tracking.",
-  // General module entities
-  "Dashboard": "Executive summary data. Fetch aggregated metrics for various business reports and dashboard widgets.",
-  "Company / Config": "System-wide settings and company profile details. Includes general configuration and company list retrieval.",
-  "User / Branch": "User and branch management. Retrieve branch lists, user details, and handle password updates.",
-  "Notifications": "Communication services. Send SMS notifications and manage OneSignal push notification logs.",
-  "IRD API / Compliance": "Compliance and regulatory endpoints. Includes IRD API testing and bill verification services.",
+  "Ledger Group": "Ledger Groups form the backbone of your chart of accounts. They classify every ledger into categories such as Assets, Liabilities, Income, and Expenses. Use these endpoints to retrieve the full hierarchy of groups and to build dynamic account selection UIs. For high-volume integrations, we recommend caching the ledger group hierarchy locally and refreshing it on demand.",
+  "Ledger": "Ledgers represent individual account heads — parties, banks, income, or expense accounts. This set of endpoints lets you create, update, search, and retrieve ledger details, including statutory and statutory tax registration information. Use the <code>autocomplete</code> endpoint for real-time search in your own UI components.",
+  "Currency": "The Currency module allows you to manage multi-currency ledger mappings. Use these endpoints to retrieve currency names linked to specific ledgers, enabling multi-currency transaction flows in international business environments.",
+  "Salesman": "Salesmen are the primary field-level agents in the ERP. Use these endpoints to retrieve salesman-wise party lists, manage agent profiles, view GPS locations, and map parties to a salesman hierarchy for reporting and route planning.",
+  "DebtorType": "Debtor Types categorise trade debtors by their channel or business type (e.g., Wholesaler, Retailer). This endpoint supports the creation and retrieval of debtor type classifications used for sales analysis and credit limit management.",
+  "CreditorType": "Creditor Types help segment vendors and suppliers by category. Manage creditor type definitions through standard PUT and POST endpoints to ensure consistent vendor reporting.",
+  "VoucherMode": "Voucher Modes define payment and receipt channel options such as Cash, Cheque, or Bank Transfer. Use these GET-style endpoints to retrieve all configured voucher modes by voucher type, ensuring accurate payment allocation during voucher entry.",
+  "BG": "Bank Guarantees (BG) are financial instruments issued in favour of creditors. These endpoints let you create BG records, attach scanned documents, and track status, amount, and expiry details for financial compliance.",
+  "PDC": "Post-Dated Cheques (PDC) track future-dated instruments received from or issued to parties. Save PDC records with cheque details and attach scanned copies through multipart endpoints to manage future receivables and payables.",
+  "Receipt": "Receipt vouchers record incoming payments and are a critical component of accounts receivable. Use these endpoints to create receipts with cost-centre allocations, bill references, and TDS/VAT details for comprehensive accounting.",
+  "Journal": "Journal entries are manual accounting adjustments that directly debit and credit ledger accounts. These endpoints support full double-entry journals with multiple ledger lines, narration, and file attachments for audit trails.",
+  "CashBank": "Cash and Bank Book endpoints return a chronological ledger of all cash and bank transactions within a specific date range. Use these for building reconciliation views and real-time treasury dashboards.",
+  "BankReconcilliation": "Bank Reconciliation matches your ERP bank ledger entries against the physical bank statement. Supply a date range and ledger ID to retrieve outstanding and matched transactions for accurate financial reporting.",
+  "Ledgervoucher": "Ledger Voucher reports return a summarised statement of transactions for a specific ledger account over a period, including opening and closing balances. This is the primary tool for party account statements and reconciliation.",
+  "LedgerVoucherDetails": "Returns the line-level details of every voucher posted against a ledger. Useful for building drill-down views in your application from a ledger summary into the underlying transaction level.",
+  "Daybook": "The Day Book is a chronological record of all vouchers posted on a given day across all modules. Filter by branch, voucher type, or posting status to audit daily activity and verify data entry accuracy.",
+  "ProductGroup": "Product Groups organise your inventory catalogue into logical brand or category hierarchies. Create group structures and retrieve tree-level summaries for use in complex inventory reports and warehousing modules.",
+  "productCategory": "Product Categories provide a secondary classification layer below Product Groups. Use these endpoints to create new category nodes and assign aliases for improved product searchability.",
+  "ProductCompany": "Product Company stores the brand or manufacturer of a product. This allows inventory filtering by supplier or brand, and is essential for competitor analysis and brand-wise sales reporting.",
+  "Product": "Products are the fundamental inventory units. These endpoints cover the full product lifecycle: creation, rate assignment, opening stock entry, and retrieval of current transaction history and stock status.",
+  "Unit": "Units of Measure define how products are counted, weighed, or measured (e.g., Kgs, Nos, Boxes). Manage units with decimal precision and aliases via PUT endpoints to ensure consistent inventory tracking.",
+  "SalesOrder": "Sales Orders capture confirmed customer orders before final billing. Retrieve pending summaries, generate email notifications to agents, and access order-level details for fulfilment and production planning.",
+  "SalesInvoice": "Sales Invoices are the primary billing documents for revenue recognition. Create abbreviated or full invoices with line items, VAT/TDS breakdowns, and cost-centre allocations for financial compliance.",
+  "SalesReturn": "Sales Return vouchers (Credit Notes) record goods returned by customers against a previous invoice. Endpoints mirror the Sales Invoice structure with credit-note semantics for seamless accounting.",
+  "StockJournalOpening": "Stock Journal Opening endpoints record the initial on-hand inventory quantities and valuation at the start of a fiscal period. Use these during initial system setup or year-end migrations.",
+  "Consumption": "Consumption entries track raw material or stock items consumed in production or internal operations. Post consumption journals with product, quantity, and godown details for accurate stock valuation.",
+  "Cost Center / Class": "Cost Centers and Classes allow you to track expenses and revenues by department, project, or location. Use these endpoints to retrieve structural dimensions for cost-allocated vouchers and departmental reporting.",
+  "Purchase Invoice": "Purchase Invoices record goods or services received from vendors (Accounts Payable). Manage the full procurement billing cycle: creation, itemization, and statutory tax breakdowns.",
+  "GPS / Location": "Real-time tracking and geo-location services for field agents. Use these endpoints to update salesman positions and retrieve coordinate history for mapping and route verification.",
+  "Salesman / Profile": "Agent and salesman profile management. Retrieve agent details, status, and related party mappings for security and field-force management.",
+  "Expenses": "Field expense tracking for mobile agents. Manage expense categories and retrieve claim details for salesmen to ensure accurate reimbursement and expense auditing.",
+  "Route Visits": "Monitor field visits and route adherence. Log visit start/end times and track waiting durations at customer outlets to optimize field-force productivity.",
+  "Outlet / Customer": "Customer and outlet management for field agents. Create new customers on the fly and update outlet address or contact details for real-time CRM updates.",
+  "Dashboard": "Executive summary data and business intelligence. Fetch aggregated metrics for various business reports and interactive dashboard widgets for decision support.",
+  "Company / Config": "System-wide settings and company profile details. Includes general configuration and company list retrieval for multi-branch and multi-company environments.",
+  "User / Branch": "User and branch management for security and access control. Retrieve branch lists, user details, and handle password updates for system administration.",
+  "Notifications": "Communication and alerting services. Send SMS notifications and manage OneSignal push notification logs for real-time user engagement.",
+  "IRD API / Compliance": "Compliance and regulatory endpoints for tax authorities. Includes IRD API testing and bill verification services to ensure legal compliance.",
+  "Transaction Management": "Tools for auditing and managing the full voucher lifecycle. Includes posting logs, edit retrieval, and deletion of transactions with full audit trails.",
+  "Custom Data & Reporting": "Flexible data retrieval and custom report generation using RDL layouts. Manage exports, email custom reports, and run structured data queries.",
+  "Dynamic Data / AI": "Advanced dynamic data handling and AI-driven interfaces. Use these for non-static data structures and intelligent data processing within the ERP ecosystem.",
 };
 
 // ─── Entity → Folder + Keyword Map ───────────────────────────────────────────
@@ -88,21 +84,30 @@ const ENTITY_MAP = [
   { entity: "Cost Center / Class",   module: "Account",   keywords: ["costclasslist","costcenter"] },
   // Agent module mappings
   { entity: "GPS / Location",        module: "Agent",     keywords: ["gps","geolocation","geoloc"] },
-  { entity: "Salesman / Profile",    module: "Agent",     keywords: ["getnameforgps","getprofile","getpartylist"] },
-  { entity: "Expenses",              module: "Agent",     keywords: ["expense","expcategory","exp_get"] },
-  { entity: "Route Visits",          module: "Agent",     keywords: ["startvisit","waitingfrom"] },
-  { entity: "Outlet / Customer",     module: "Agent",     keywords: ["newcustomer","updateoutletaddress"] },
+  { entity: "Salesman / Profile",    module: "Agent",     keywords: ["getnameforgps","getprofile","getpartylist","salesmanprofile"] },
+  { entity: "Expenses",              module: "Agent",     keywords: ["expense","expcategory","exp_get","exp_claim"] },
+  { entity: "Route Visits",          module: "Agent",     keywords: ["startvisit","waitingfrom","routevisit","routeplan","start route visit"] },
+  { entity: "Outlet / Customer",     module: "Agent",     keywords: ["newcustomer","updateoutletaddress","ledgeraddress"] },
+  { entity: "Orders / No-Order",     module: "Agent",     keywords: ["noorder","no order"] },
+  { entity: "CDR / Call Records",    module: "Agent",     keywords: ["cdr"] },
+  { entity: "Sales Receipts",        module: "Agent",     keywords: ["sales receipt"] },
   // Employee module mappings
-  { entity: "Leave Management",      module: "Employee",  keywords: ["leavetype","leaveapprove","addleaverequest","leavebalance","leavereq"] },
-  { entity: "Attendance",            module: "Employee",  keywords: ["attendance"] },
+  { entity: "Leave Management",      module: "Employee",  keywords: ["leavetype","leaveapprove","addleaverequest","leavebalance","leavereq","leaave"] },
+  { entity: "Attendance",            module: "Employee",  keywords: ["attendance","myteam"] },
   { entity: "Payroll",               module: "Employee",  keywords: ["payslip"] },
   { entity: "Asset Requests",        module: "Employee",  keywords: ["assetrequest"] },
   // General module mappings
-  { entity: "Dashboard",             module: "General",   keywords: ["getdashboard","dashboardtypes"] },
-  { entity: "Company / Config",      module: "General",   keywords: ["companylist","getcompanydetail","generalconfig","isvalidcompany"] },
-  { entity: "User / Branch",         module: "General",   keywords: ["isvaliduser","getuserdetail","branchlist","updatepwd"] },
-  { entity: "Notifications",         module: "General",   keywords: ["notification","sms","onesignal"] },
+  { entity: "Dashboard",             module: "General",   keywords: ["getdashboard","dashboardtypes","dashboard","todaysales"] },
   { entity: "IRD API / Compliance",  module: "General",   keywords: ["irdapi"] },
+  { entity: "Transaction Management", module: "General",   keywords: ["posttransaction","canceltransaction","gettranpostlog","gettransactionforedit","deltransaction"] },
+  { entity: "Custom Data & Reporting", module: "General",   keywords: ["customdata","exportcustom","emailcustom","print custom"] },
+  { entity: "Dynamic Data / AI",     module: "General",   keywords: ["dynamicai","dynamicdata","customaction"] },
+  { entity: "Company / Config",      module: "General",   keywords: ["companylist","getcompanydetail","generalconfig","isvalidcompany","staticvalues","getcompanyperiod"] },
+  { entity: "User / Branch",         module: "General",   keywords: ["isvaliduser","getuserdetail","branchlist","updatepwd", "userbranch"] },
+  { entity: "Notifications",         module: "General",   keywords: ["notification","sms","onesignal", "pushnotification"] },
+  { entity: "GPS / Location",        module: "General",   keywords: ["missinglocation", "gpsdata"] },
+  { entity: "Salesman / Profile",    module: "General",   keywords: ["parentuserid", "salesmaninfo"] },
+  { entity: "Ledger",                module: "General",   keywords: ["commonnarration", "genericledger"] },
 ];
 
 // ─── Reports & Misc (non-entity) ─────────────────────────────────────────────
@@ -197,7 +202,49 @@ document.addEventListener("DOMContentLoaded", () => {
       document.querySelectorAll('.nav-item, .static-nav-item').forEach(i => i.style.display = '');
     }
   });
+
+  // Sidebar controls: Expand/Collapse All
+  const expandBtn = document.getElementById('expand-all-btn');
+  const collapseBtn = document.getElementById('collapse-all-btn');
+
+  if (expandBtn) expandBtn.addEventListener('click', () => toggleSidebar(true));
+  if (collapseBtn) collapseBtn.addEventListener('click', () => toggleSidebar(false));
 });
+
+/**
+ * Toggles all collapsible groups in the sidebar.
+ * @param {boolean} expand - True to expand all, false to collapse all.
+ */
+function toggleSidebar(expand) {
+  console.log(`[Sidebar] Absolute Toggle: ${expand ? 'Expanding' : 'Collapsing'} all sections.`);
+  
+  // 1. Target all group bodies (Modules and Entities)
+  const allBodies = document.querySelectorAll('.sidebar-group-body, .entity-group-body');
+  allBodies.forEach(body => {
+    body.style.display = expand ? 'block' : 'none';
+  });
+
+  // 2. Correctly toggle chevron and header states
+  // Module headers use 'collapsed' class (rotated -90 when collapsed)
+  const moduleHeaders = document.querySelectorAll('.sidebar-group-header');
+  moduleHeaders.forEach(header => {
+    header.classList.toggle('collapsed', !expand);
+  });
+
+  // Entity headers use 'open' class (chevron rotates 180 when open)
+  const entityHeaders = document.querySelectorAll('.entity-group-header');
+  entityHeaders.forEach(header => {
+    header.classList.toggle('open', expand);
+  });
+
+  // 3. Highlight the active state of buttons if needed (optional UI polish)
+  const expandBtn = document.getElementById('expand-all-btn');
+  const collapseBtn = document.getElementById('collapse-all-btn');
+  if (expandBtn && collapseBtn) {
+    expandBtn.style.color = expand ? 'var(--xero-blue)' : 'var(--text-tertiary)';
+    collapseBtn.style.color = !expand ? 'var(--xero-blue)' : 'var(--text-tertiary)';
+  }
+}
 
 // ─── Build Entity Buckets from All Items ──────────────────────────────────────
 function buildEntityBuckets(allFolders) {
@@ -465,49 +512,56 @@ There is currently no rate limit enforced on the API. However, it is recommended
 
   document.getElementById('intro-section').innerHTML = `
     <div class="intro-hero">
-      <div class="intro-badge">REST API</div>
-      <h1>${data.info.name || 'API Documentation'}</h1>
-      <p class="intro-subtitle">Complete reference documentation for all endpoints.</p>
+      <div class="intro-badge">REST API Reference</div>
+      <h1>${data.info.name || 'Pivotal ERP API Documentation'}</h1>
+      <p class="intro-subtitle">A powerful, developer-first API for core accounting and inventory management.</p>
     </div>
     <div class="markdown-body" id="overview-intro">
-      <h1 id="overview-intro-h">Introduction</h1>
-      <p>Welcome to the <strong>Pivotal ERP Accounting API</strong>. Our REST API provides programmatic access to core accounting, inventory management, and business reporting capabilities — enabling you to build custom integrations, automate workflows, and sync data between Pivotal ERP and your own systems.</p>
+      <h1 id="overview-intro-h">Getting Started</h1>
+      <p>The <strong>Pivotal ERP Accounting API</strong> allows you to programmatically access and manage your ERP data. Our API is designed around RESTful principles, using standard HTTP methods and JSON for communication.</p>
 
-      <h2 id="overview-entities">Core Entities</h2>
-      <table><thead><tr><th>Module</th><th>Entity</th><th>Description</th></tr></thead><tbody>
-        <tr><td>Account</td><td>Ledger Group</td><td>Chart of account hierarchies</td></tr>
-        <tr><td>Account</td><td>Ledger</td><td>Individual account heads and parties</td></tr>
-        <tr><td>Account</td><td>Journal</td><td>Double-entry manual adjustments</td></tr>
-        <tr><td>Account</td><td>Receipt</td><td>Incoming payment vouchers</td></tr>
-        <tr><td>Account</td><td>BG / PDC</td><td>Bank Guarantees and Post-Dated Cheques</td></tr>
-        <tr><td>Account</td><td>Bank Reconciliation</td><td>Match ERP entries to bank statements</td></tr>
-        <tr><td>Account</td><td>CashBank</td><td>Cash and bank book statements</td></tr>
-        <tr><td>Account</td><td>Ledger Voucher</td><td>Party account statements</td></tr>
-        <tr><td>Account</td><td>Daybook</td><td>Chronological daily voucher register</td></tr>
-        <tr><td>Inventory</td><td>Product</td><td>Item catalogue and stock management</td></tr>
-        <tr><td>Inventory</td><td>Sales Invoice</td><td>Customer billing documents</td></tr>
-        <tr><td>Inventory</td><td>Sales Order</td><td>Pre-billing customer orders</td></tr>
-        <tr><td>Inventory</td><td>Sales Return</td><td>Customer return credit notes</td></tr>
-        <tr><td>Inventory</td><td>Consumption</td><td>Raw material usage entries</td></tr>
-        <tr><td>Inventory</td><td>Stock Journal Opening</td><td>Year-start inventory balances</td></tr>
+      <h3>Base URL</h3>
+      <p>All API requests should be made to the following base URL:</p>
+      <div class="code-wrapper"><pre><code>https://api.pivotalerp.com/v1</code></pre></div>
+
+      <h2 id="overview-entities">Entity Framework</h2>
+      <p>Pivotal ERP organizes data into distinct <strong>Entities</strong> within logical <strong>Modules</strong>. Each entity typically supports standard CRUD (Create, Read, Update, Delete) operations.</p>
+      <table><thead><tr><th>Module</th><th>Key Entities</th><th>Primary Use Case</th></tr></thead><tbody>
+        <tr><td><strong>Account</strong></td><td>Ledgers, Journals, Receipts</td><td>Financial tracking, payments, and double-entry accounting.</td></tr>
+        <tr><td><strong>Inventory</strong></td><td>Products, Invoices, Orders</td><td>Stock management, customer billing, and procurement.</td></tr>
+        <tr><td><strong>Agent</strong></td><td>GPS, Routes, Expenses</td><td>Field-force management and real-time agent tracking.</td></tr>
+        <tr><td><strong>Employee</strong></td><td>Attendance, Leave, Payroll</td><td>Human resource management and compensation tracking.</td></tr>
+        <tr><td><strong>General</strong></td><td>Config, Users, Reports</td><td>System administration and business intelligence.</td></tr>
       </tbody></table>
 
-      <h2 id="overview-auth">Authentication</h2>
-      <p>All secured endpoints require a <strong>Bearer token</strong> in the <code>Authorization</code> header:</p>
-      <p><code>Authorization: Bearer &lt;your_token&gt;</code></p>
-      <p>Obtain a token via the <strong>Auth → New Token</strong> endpoint. Tokens expire and can be refreshed via <strong>Auth → Refresh Token</strong>.</p>
+      <h2 id="overview-auth">Authentication & Security</h2>
+      <p>Our API uses <strong>OAuth 2.0 / Bearer Tokens</strong> to ensure secure access to your data. You must include a valid token in the <code>Authorization</code> header of every request.</p>
+      
+      <h3>How to Authenticate</h3>
+      <ol>
+        <li><strong>Obtain Credentials:</strong> Contact your system administrator to get an <code>API Key</code> and <code>Client Secret</code>.</li>
+        <li><strong>Generate Token:</strong> Use the <code>Auth → New Token</code> endpoint to exchange your credentials for a <code>Bearer Token</code>.</li>
+        <li><strong>Authorize Requests:</strong> Add the token to your header as follows:</li>
+      </ol>
+      <div class="code-wrapper"><pre><code>Authorization: Bearer YOUR_ACCESS_TOKEN</code></pre></div>
 
-      <h2 id="overview-errors">Error Codes</h2>
-      <table><thead><tr><th>Code</th><th>Meaning</th></tr></thead><tbody>
-        <tr><td>200</td><td>Success</td></tr>
-        <tr><td>400</td><td>Bad Request — malformed body or missing fields</td></tr>
-        <tr><td>401</td><td>Unauthorized — invalid or expired token</td></tr>
-        <tr><td>403</td><td>Forbidden — insufficient permissions</td></tr>
-        <tr><td>500</td><td>Internal Server Error</td></tr>
+      <h2 id="overview-errors">Response Formats & Errors</h2>
+      <p>All successful responses return a <code>200 OK</code> status with a JSON body. If an error occurs, the API returns an appropriate HTTP status code along with a descriptive error message in the response body.</p>
+      <table><thead><tr><th>Status Code</th><th>Meaning</th><th>Description</th></tr></thead><tbody>
+        <tr><td><code>200</code></td><td>Success</td><td>The request was successful.</td></tr>
+        <tr><td><code>400</code></td><td>Bad Request</td><td>Malformed request body or missing required parameters.</td></tr>
+        <tr><td><code>401</code></td><td>Unauthorized</td><td>Your Bearer token is invalid or has expired.</td></tr>
+        <tr><td><code>404</code></td><td>Not Found</td><td>The requested resource does not exist.</td></tr>
+        <tr><td><code>500</code></td><td>Server Error</td><td>An internal error occurred on our servers.</td></tr>
       </tbody></table>
 
-      <h2 id="overview-rate">Rate Limiting</h2>
-      <p>There is currently no rate limit enforced. It is recommended to batch bulk operations and avoid rapid-fire repeated calls in tight loops to ensure stability.</p>
+      <h2 id="overview-rate">API Limits & Best Practices</h2>
+      <p>To ensure high availability and stability, we recommend following these integration best practices:</p>
+      <ul>
+        <li><strong>Debounce Calls:</strong> Avoid rapid, repeated calls in short bursts.</li>
+        <li><strong>Batching:</strong> Use bulk upload endpoints where available for large data synchronization.</li>
+        <li><strong>Caching:</strong> Cache static metadata (Units, Categories, Groups) locally and refresh periodically.</li>
+      </ul>
     </div>
   `;
 
