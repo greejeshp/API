@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pivotal ERP API Documentation</title>
+    <!-- Google Fonts for Modern Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- PrismJS for Syntax Highlighting -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="toast" class="toast">Collection Loaded Successfully!</div>
+
+    <!-- Header Navigation -->
+    <header class="app-header">
+        <div class="logo">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" class="brand-icon">
+                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="brand-text">Pivotal API</span> Documentation
+        </div>
+        <div class="header-actions">
+            <span class="version-badge">v1.0</span>
+            <a href="https://mktdemo.dynamicerp.online" target="_blank" class="base-url-chip" title="Live Base URL">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                mktdemo.dynamicerp.online
+            </a>
+            <label for="postman-upload" class="upload-btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                Upload Postman JSON
+            </label>
+            <input type="file" id="postman-upload" accept=".json" style="display: none;" />
+        </div>
+    </header>
+
+    <!-- Main App Container -->
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-search">
+                <input type="text" id="search-input" placeholder="Search API..." />
+            </div>
+            <div id="nav-content" class="nav-content">
+                <!-- Navigation modules injected here by app.js -->
+            </div>
+        </nav>
+
+        <!-- Main Documentation Content -->
+        <main class="content-area">
+            <div class="intro-section" id="intro-section">
+                <!-- Overview markdown injected here -->
+            </div>
+            
+            <div id="endpoints-container">
+                <!-- Endpoints blocks injected here by app.js -->
+            </div>
+        </main>
+    </div>
+
+    <!-- External Utilities -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.0/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    
+    <!-- Application Scripts -->
+    <script src="data.js?v=1773744600"></script>
+    <script src="app.js?v=1773744600"></script>
+</body>
+</html>
