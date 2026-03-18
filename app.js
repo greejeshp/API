@@ -54,7 +54,7 @@ const ENTITY_DESCRIPTIONS = {
 const ENTITY_MAP = [
   // Account module entities
   { entity: "Ledger Group",          module: "Account",   keywords: ["ledgergroup", "getledgergrouplist", "getledgergroupsummary", "saveldggrp"] },
-  { entity: "Ledger",                module: "Account",   keywords: ["saveledger", "autocompleteledger", "getledgerdetail", "ledgerdetails", "salesmanwiseledger", "salesmanwisepartylist", "getdebtortype", "savedebtortype", "savedebtorroute", "getarealist","getpartyageing","getpartyduesbill","getledgercategory","getledgerchannel","getledgervoucher","printledgervoucher","costcenterclosi","ledgervoucher","billwiseageing","aging"] },
+  { entity: "Ledger",                module: "Account",   keywords: ["saveledger", "autocompleteledger", "getledgerdetail", "ledgerdetails", "salesmanwiseledger", "salesmanwisepartylist", "getdebtortype", "savedebtortype", "savedebtorroute", "getarealist","getpartyageing","getpartyduesbill","getledgercategory","getledgerchannel","getledgervoucher","printledgervoucher","costcenterclosi","ledgervoucher","billwiseageing","aging","commonnarration", "genericledger"] },
   { entity: "Currency",              module: "Account",   keywords: ["currency"] },
   { entity: "Salesman",              module: "Account",   keywords: ["saveagent","getagentlist","salesmanwise"] },
   { entity: "DebtorType",            module: "Account",   keywords: ["debtortype","savedebtortype","getdebtortype"] },
@@ -83,8 +83,8 @@ const ENTITY_MAP = [
   { entity: "Purchase Invoice",      module: "Inventory", keywords: ["purchaseinvoice"] },
   { entity: "Cost Center / Class",   module: "Account",   keywords: ["costclasslist","costcenter"] },
   // Agent module mappings
-  { entity: "GPS / Location",        module: "Agent",     keywords: ["gps","geolocation","geoloc"] },
-  { entity: "Salesman / Profile",    module: "Agent",     keywords: ["getnameforgps","getprofile","getpartylist","salesmanprofile"] },
+  { entity: "GPS / Location",        module: "Agent",     keywords: ["gps","geolocation","geoloc","missinglocation", "gpsdata"] },
+  { entity: "Salesman / Profile",    module: "Agent",     keywords: ["getnameforgps","getprofile","getpartylist","salesmanprofile","parentuserid", "salesmaninfo"] },
   { entity: "Expenses",              module: "Agent",     keywords: ["expense","expcategory","exp_get","exp_claim"] },
   { entity: "Route Visits",          module: "Agent",     keywords: ["startvisit","waitingfrom","routevisit","routeplan","start route visit"] },
   { entity: "Outlet / Customer",     module: "Agent",     keywords: ["newcustomer","updateoutletaddress","ledgeraddress"] },
@@ -105,9 +105,6 @@ const ENTITY_MAP = [
   { entity: "Company / Config",      module: "General",   keywords: ["companylist","getcompanydetail","generalconfig","isvalidcompany","staticvalues","getcompanyperiod"] },
   { entity: "User / Branch",         module: "General",   keywords: ["isvaliduser","getuserdetail","branchlist","updatepwd", "userbranch"] },
   { entity: "Notifications",         module: "General",   keywords: ["notification","sms","onesignal", "pushnotification"] },
-  { entity: "GPS / Location",        module: "General",   keywords: ["missinglocation", "gpsdata"] },
-  { entity: "Salesman / Profile",    module: "General",   keywords: ["parentuserid", "salesmaninfo"] },
-  { entity: "Ledger",                module: "General",   keywords: ["commonnarration", "genericledger"] },
 ];
 
 // ─── Reports & Misc (non-entity) ─────────────────────────────────────────────
@@ -497,118 +494,110 @@ function createNavItem(reqItem, context) {
 
 // ─── Main Render ──────────────────────────────────────────────────────────────
 function renderDocumentation(data) {
-  // Render intro
   const xeroDescription = `
 # Introduction
 
-Welcome to the **Pivotal ERP Accounting API**. Our REST API provides programmatic access to core accounting, inventory management, and business reporting capabilities — enabling you to build custom integrations, automate workflows, and sync data between Pivotal ERP and your own systems.
+Welcome to the **Pivotal ERP API**. You can use this REST API to connect your own applications with our core accounting, inventory, and reporting systems.
 
 # Core Entities
 
 | Module | Entity | Description |
 |--------|--------|-------------|
-| Account | Ledger Group | Chart of account hierarchies |
-| Account | Ledger | Individual account heads and parties |
-| Account | Journal | Double-entry manual adjustments |
-| Account | Receipt | Incoming payment vouchers |
-| Account | BG / PDC | Bank Guarantees and Post-Dated Cheques |
-| Account | Bank Reconciliation | Matching ERP entries to bank statements |
-| Inventory | Product | Item catalogue and stock management |
-| Inventory | Sales Invoice | Customer billing documents |
-| Inventory | Sales Order | Pre-billing customer orders |
-| Inventory | Consumption | Raw material usage entries |
+| Account | Ledger Group | Chart of accounts structure. |
+| Account | Ledger | Individual accounts, customers, or vendors. |
+| Account | Journal | Manual double-entry journal vouchers. |
+| Account | Receipt | Incoming payment records. |
+| Account | BG / PDC | Bank Guarantees and Post-Dated Cheques. |
+| Account | Bank Reconciliation | Match ERP entries with bank statements. |
+| Inventory | Product | Items, inventory, and stock info. |
+| Inventory | Sales Invoice | Customer bills and invoices. |
+| Inventory | Sales Order | Saved customer orders before billing. |
+| Inventory | Consumption | Raw material usage logs. |
 
 # Authentication
 
-All secured endpoints require a **Bearer token** in the \`Authorization\` header:
+All requests need a **Bearer token** in the header. It looks like this:
 
 \`Authorization: Bearer <your_token>\`
 
-Obtain a token via the **Auth → New Token** endpoint. Tokens expire and can be refreshed using **Auth → Refresh Token**.
+Get a token by calling the **Auth → GetToken** endpoint. Tokens expire, so make sure your app handles refreshing them.
 
 # Error Codes
 
 | Code | Meaning |
 |------|---------|
-| 200 | Success |
-| 400 | Bad Request — malformed body or missing fields |
-| 401 | Unauthorized — invalid or expired token |
-| 403 | Forbidden — insufficient permissions |
-| 500 | Internal Server Error |
+| 200 | Success — Everything worked. |
+| 400 | Bad Request — You might be missing a required field or sent bad JSON. |
+| 401 | Unauthorized — Your token is missing or expired. |
+| 403 | Forbidden — You don't have permission to do this. |
+| 500 | Server Error — Something broke on our end. |
 
 # Rate Limiting
 
-There is currently no rate limit enforced on the API. However, it is recommended to batch bulk operations and avoid rapid-fire repeated calls in tight loops to ensure stability.
+We don't currently enforce strict rate limits. That said, please batch your requests when possible and avoid hitting the API in tight loops to keep things fast for everyone.
 `;
 
   document.getElementById('intro-section').innerHTML = `
     <div class="intro-hero">
-      <div class="intro-badge">REST API Reference</div>
-      <h1>${data.info.name || 'Pivotal ERP API Documentation'}</h1>
-      <p class="intro-subtitle">A powerful, developer-first API for core accounting and inventory management.</p>
+      <div class="intro-badge">API Reference</div>
+      <h1>${data.info.name || 'Pivotal ERP API'}</h1>
+      <p class="intro-subtitle">Documentation for integrating with Pivotal ERP's accounting and inventory modules.</p>
     </div>
     <div class="markdown-body" id="overview-intro">
       <h1 id="overview-intro-h">Getting Started</h1>
-      <p>The <strong>Pivotal ERP Accounting API</strong> allows you to programmatically access and manage your ERP data. Our API is designed around RESTful principles, using standard HTTP methods and JSON for communication.</p>
+      <p>This API lets you read and write data directly into Pivotal ERP. We use standard HTTP requests and JSON.</p>
 
       <h3>Base URL</h3>
-      <p>All API requests should be made to the following base URL:</p>
+      <p>Point all your requests here:</p>
       <div class="code-wrapper"><pre><code>https://api.pivotalerp.com/v1</code></pre></div>
 
       <h2 id="overview-entities">Entity Framework</h2>
-      <p>Pivotal ERP organizes data into distinct <strong>Entities</strong> within logical <strong>Modules</strong>. Each entity typically supports standard CRUD (Create, Read, Update, Delete) operations.</p>
-      <table><thead><tr><th>Module</th><th>Key Entities</th><th>Primary Use Case</th></tr></thead><tbody>
-        <tr><td><strong>Account</strong></td><td>Ledgers, Journals, Receipts</td><td>Financial tracking, payments, and double-entry accounting.</td></tr>
-        <tr><td><strong>Inventory</strong></td><td>Products, Invoices, Orders</td><td>Stock management, customer billing, and procurement.</td></tr>
-        <tr><td><strong>Agent</strong></td><td>GPS, Routes, Expenses</td><td>Field-force management and real-time agent tracking.</td></tr>
-        <tr><td><strong>Employee</strong></td><td>Attendance, Leave, Payroll</td><td>Human resource management and compensation tracking.</td></tr>
-        <tr><td><strong>General</strong></td><td>Config, Users, Reports</td><td>System administration and business intelligence.</td></tr>
+      <p>Data in Pivotal ERP is organized into modules. Most entities support standard create, read, update, and delete actions.</p>
+      <table><thead><tr><th>Module</th><th>Key Entities</th><th>What it's for</th></tr></thead><tbody>
+        <tr><td><strong>Account</strong></td><td>Ledgers, Journals, Receipts</td><td>Financials, tracking payments, and chart of accounts.</td></tr>
+        <tr><td><strong>Inventory</strong></td><td>Products, Invoices, Orders</td><td>Stock, sales, and purchasing.</td></tr>
+        <tr><td><strong>Agent</strong></td><td>GPS, Routes, Expenses</td><td>Field agent tracking and expense claims.</td></tr>
+        <tr><td><strong>Employee</strong></td><td>Attendance, Leave, Payroll</td><td>HR and payroll records.</td></tr>
+        <tr><td><strong>General</strong></td><td>Config, Users, Reports</td><td>System settings and data exports.</td></tr>
       </tbody></table>
 
-      <h2 id="overview-auth">Authentication & Security</h2>
-      <p>Our API uses <strong>OAuth 2.0 / Bearer Tokens</strong> to ensure secure access to your data. You must include a valid token in the <code>Authorization</code> header of every request.</p>
+      <h2 id="overview-auth">Authentication</h2>
+      <p>We use Bearer tokens to secure the API. You need to pass a valid token in the <code>Authorization</code> header of every request.</p>
       
-      <h3>How to Authenticate</h3>
+      <h3>How to get a token</h3>
       <ol>
-        <li><strong>Obtain Credentials:</strong> Contact your system administrator to get an <code>API Key</code> and <code>Client Secret</code>.</li>
-        <li><strong>Generate Token:</strong> Use the <code>Auth → New Token</code> endpoint to exchange your credentials for a <code>Bearer Token</code>.</li>
-        <li><strong>Authorize Requests:</strong> Add the token to your header as follows:</li>
+        <li>Ask your admin for your API credentials.</li>
+        <li>Call the <code>Auth → GetToken</code> endpoint with those credentials to get a Bearer token.</li>
+        <li>Pass the token in your headers:</li>
       </ol>
-      <div class="code-wrapper"><pre><code>Authorization: Bearer YOUR_ACCESS_TOKEN</code></pre></div>
+      <div class="code-wrapper"><pre><code>Authorization: Bearer YOUR_TOKEN_HERE</code></pre></div>
 
-      <h2 id="overview-errors">Response Formats & Errors</h2>
-      <p>All successful responses return a <code>200 OK</code> status with a JSON body. If an error occurs, the API returns an appropriate HTTP status code along with a descriptive error message in the response body.</p>
-      <table><thead><tr><th>Status Code</th><th>Meaning</th><th>Description</th></tr></thead><tbody>
-        <tr><td><code>200</code></td><td>Success</td><td>The request was successful.</td></tr>
-        <tr><td><code>400</code></td><td>Bad Request</td><td>Malformed request body or missing required parameters.</td></tr>
-        <tr><td><code>401</code></td><td>Unauthorized</td><td>Your Bearer token is invalid or has expired.</td></tr>
-        <tr><td><code>404</code></td><td>Not Found</td><td>The requested resource does not exist.</td></tr>
-        <tr><td><code>500</code></td><td>Server Error</td><td>An internal error occurred on our servers.</td></tr>
-      </tbody></table>
+      <h2 id="overview-errors">Errors</h2>
+      <p>A successful request returns a <code>200 OK</code> with JSON. If something goes wrong, we'll return a standard HTTP error code and a message explaining what happened.</p>
 
-      <h2 id="overview-rate">API Limits & Best Practices</h2>
-      <p>To ensure high availability and stability, we recommend following these integration best practices:</p>
+      <h2 id="overview-rate">Best Practices</h2>
+      <p>To keep your integration reliable, we suggest following these tips:</p>
       <ul>
-        <li><strong>Debounce Calls:</strong> Avoid rapid, repeated calls in short bursts.</li>
-        <li><strong>Batching:</strong> Use bulk upload endpoints where available for large data synchronization.</li>
-        <li><strong>Caching:</strong> Cache static metadata (Units, Categories, Groups) locally and refresh periodically.</li>
+        <li><strong>Don't spam calls:</strong> Avoid sending hundreds of requests per second.</li>
+        <li><strong>Use batches:</strong> If you need to sync a lot of data, use bulk endpoints if they're available.</li>
+        <li><strong>Cache locally:</strong> Save slow-changing data (like units or categories) on your side and sync it once a day.</li>
       </ul>
 
       <h2 id="overview-pagination">Pagination</h2>
-      <p>All list-based endpoints support pagination to handle large datasets efficiently. Use the following query parameters alongside your GET or POST searches:</p>
+      <p>Endpoints that return lists are paginated. You can control the pages by passing these parameters in your query string or JSON body:</p>
       <table>
         <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>pageSize</code></td><td>number</td><td>Number of records per page (Default: 50, Max: 500).</td></tr>
-          <tr><td><code>pageNumber</code></td><td>number</td><td>The page index you want to retrieve (starts at 1).</td></tr>
+          <tr><td><code>pageSize</code></td><td>number</td><td>How many records to return at once (Default: 50).</td></tr>
+          <tr><td><code>pageNumber</code></td><td>number</td><td>Which page to get (Starts at 1).</td></tr>
         </tbody>
       </table>
 
       <h2 id="overview-idempotency">Idempotency</h2>
-      <p>For operations that modify critical data (like creating an Invoice), we recommend implementing <strong>Idempotency</strong> to prevent accidental double-postings in case of network timeouts.</p>
+      <p>If you're creating important records (like invoices or payments), network timeouts can be scary. To prevent accidentally creating a record twice, send an <code>Idempotency-Key</code> header.</p>
       <ul>
-        <li>If your system supports it, include an <code>Idempotency-Key</code> header with a unique string (like a UUID) for the transaction.</li>
-        <li>If a request with the same key is received by the ERP, it will bypass creation and return the previously successful response.</li>
+        <li>Set the header to a unique string (like a UUID) for your specific transaction.</li>
+        <li>If we see the same key twice within 24 hours, we'll just return the exact same success response we sent the first time, without double-booking anything.</li>
       </ul>
     </div>
   `;
@@ -750,7 +739,7 @@ function renderEndpointsSummary(entityBuckets, extraFolders, container) {
     + Object.values(extraFolders).reduce((s, eps) => s + eps.length, 0);
 
   let html = `
-    <div class="summary-section" id="endpoints-summary-section">
+    <div class="summary-section" id="endpoints-summary">
       <div class="summary-header">
         <div>
           <div class="module-badge">QUICK REFERENCE</div>
@@ -802,8 +791,9 @@ function renderEndpointsSummary(entityBuckets, extraFolders, container) {
 // ─── Entity Section ───────────────────────────────────────────────────────────
 function renderEntitySection(entityName, bucket, container) {
   const desc = ENTITY_DESCRIPTIONS[entityName] || '';
+  const safeId = `entity-${bucket.module}-${entityName}`.replace(/\s+/g, '-');
   container.insertAdjacentHTML('beforeend', `
-    <div class="entity-section-header" id="entity-${entityName.replace(/\s+/g,'-')}">
+    <div class="entity-section-header" id="${safeId}">
       <h3 class="entity-heading">${entityName}</h3>
       ${desc ? `<p class="entity-desc">${desc}</p>` : ''}
     </div>
@@ -956,7 +946,7 @@ function createEndpointBlock(reqItem) {
         <div class="code-header">
           <div class="code-header-left">
             <span class="code-lang">JSON</span>
-            <button class="curl-btn" onclick="copyCurl(this, '${method}', '${urlRaw.replace(/\{\{URL\}\}/g, BASE_URL)}', ${formattedJson ? JSON.stringify(formattedJson) : 'null'})">
+            <button class="curl-btn" onclick="copyCurl(this, '${method}', '${urlRaw.replace(/\{\{URL\}\}/g, BASE_URL)}')">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 17l6-6-6-6M12 19h8"/></svg>
               Copy as cURL
             </button>
@@ -1042,42 +1032,40 @@ function buildParamsTable(obj, parentId = '', rootName = "Request Body Parameter
 function generateFieldDesc(key) {
   const kl = key.toLowerCase();
   
-  // Specific Exact ERP Matches
-  if (kl === 'searchby' || kl === 'searchvalue') return "Filter parameter used to search for matching records.";
-  if (kl === 'ledgertype' || kl === 'ledgergroupid' || kl === 'partyledgerid') return "Internal reference ID linking to a specific accounting Ledger or Account Group.";
-  if (kl === 'voucherid' || kl === 'vouchername' || kl === 'voucherdate' || kl === 'vouchertype') return "Core transaction data defining the accounting voucher type, identity, or date of activity.";
-  if (kl === 'datefrom' || kl === 'dateto') return "Date boundary used for filtering transactions and reporting data.";
-  if (kl === 'reporttype') return "Identifier representing the format or specific structure of the requested report.";
-  if (kl === 'branchid') return "Organizational branch or location identifier for multi-location businesses.";
-  if (kl === 'refno' || kl === 'api_responseid') return "External reference number or API transaction ID used for idempotency/tracking.";
-  if (kl === 'itemallocationcoll' || kl === 'lineitems' || kl === 'details') return "Collection of line items mapping products, quantities, and rates for the given transaction.";
-  if (kl === 'productid' || kl === 'itemid') return "Unique identifier for the inventory product, material, or service item.";
-  if (kl === 'actualqty' || kl === 'billedqty' || kl === 'quantity') return "Physical unit quantity being transacted or adjusted.";
-  if (kl === 'rate' || kl === 'price' || kl === 'unitprice') return "Unit price or exchange rate applicable to the specific line item.";
-  if (kl === 'salesinvoicedetail' || kl === 'billingaddress' || kl === 'shippingdetails') return "Extended customer, tax, and address details necessary for formal billing and compliance.";
-  if (kl === 'salestaxno' || kl === 'pan' || kl === 'vat') return "Official government tax registration number (VAT/PAN).";
+  if (kl === 'searchby' || kl === 'searchvalue') return "Type what you're looking for to filter the results.";
+  if (kl === 'ledgertype' || kl === 'ledgergroupid' || kl === 'partyledgerid') return "The ID of the ledger or account group.";
+  if (kl === 'voucherid' || kl === 'vouchername' || kl === 'voucherdate' || kl === 'vouchertype') return "Details about the voucher, like its type and date.";
+  if (kl === 'datefrom' || kl === 'dateto') return "Used to filter records between specific dates.";
+  if (kl === 'reporttype') return "Tells the API which report format you need.";
+  if (kl === 'branchid') return "The ID of the branch or location.";
+  if (kl === 'refno' || kl === 'api_responseid') return "Your own reference number, useful for tracking.";
+  if (kl === 'itemallocationcoll' || kl === 'lineitems' || kl === 'details') return "The line items in this transaction.";
+  if (kl === 'productid' || kl === 'itemid') return "The ID of the product or item.";
+  if (kl === 'actualqty' || kl === 'billedqty' || kl === 'quantity') return "The actual quantity of the item.";
+  if (kl === 'rate' || kl === 'price' || kl === 'unitprice') return "The price per unit.";
+  if (kl === 'salesinvoicedetail' || kl === 'billingaddress' || kl === 'shippingdetails') return "Extra customer and billing details.";
+  if (kl === 'salestaxno' || kl === 'pan' || kl === 'vat') return "The company's tax registration number (VAT/PAN).";
   
-  // Broad Generic Matches
   if (kl.endsWith('id')) {
     const noun = key.replace(/([A-Z])/g, ' $1').replace(/id/ig, '').trim().toLowerCase();
-    return `Unique reference identifier for the associated ${noun || 'entity'}.`;
+    return `The ID of the ${noun || 'record'}.`;
   }
-  if (kl.includes('name') || kl === 'buyes') return "Human-readable name or text label describing this element.";
-  if (kl.includes('date') || kl.includes('time')) return "Date/Time value, expected in YYYY-MM-DD or standard robust ISO formats.";
-  if (kl.includes('amount') || kl.includes('discount') || kl.includes('tax') || kl.includes('total')) return "Financial numeric value used for pricing, taxes, or subtotal calculations.";
-  if (kl.includes('qty')) return "Numeric value representing a countable stock or service quantity.";
-  if (kl.includes('code') || kl.includes('no') || kl.includes('number')) return "System-specific alphanumeric identification code, serial, or registration number.";
-  if (kl.includes('status') || kl.includes('isactive') || kl.includes('isdeleted') || kl.includes('istax') || kl.startsWith('is')) return "State flag indicating operational status or binary characteristics (e.g., True/False, Active/Inactive).";
-  if (kl.includes('remarks') || kl.includes('narration') || kl.includes('desc') || kl.includes('memo') || kl.includes('notes')) return "Additional textual notes, description, or accounting narration for context.";
-  if (kl.includes('phone') || kl.includes('mobile') || kl.includes('tel')) return "Contact telephone or mobile capability number.";
-  if (kl.includes('email')) return "Electronic mail address for business correspondence.";
-  if (kl.includes('address') || kl.includes('city') || kl.includes('state') || kl.includes('country') || kl.includes('zip')) return "Physical location or geographical billing/shipping details.";
-  if (kl.includes('type') || kl.includes('category')) return "Classification parameter denoting the category, nature, or type of the record.";
-  if (kl.includes('level') || kl.includes('hierarchy') || kl.includes('parent')) return "Structural configuration value defining the hierarchical position (e.g., account group level).";
-  if (kl.includes('file') || kl.includes('attachment') || kl.includes('image') || kl.includes('photo')) return "Binary multipart file, image URL, or base64 encoded data for an attachment.";
+  if (kl.includes('name') || kl === 'buyes') return "The name or label.";
+  if (kl.includes('date') || kl.includes('time')) return "A date or time (usually YYYY-MM-DD).";
+  if (kl.includes('amount') || kl.includes('discount') || kl.includes('tax') || kl.includes('total')) return "The monetary value or amount.";
+  if (kl.includes('qty')) return "The quantity number.";
+  if (kl.includes('code') || kl.includes('no') || kl.includes('number')) return "The code or serial number.";
+  if (kl.includes('status') || kl.includes('isactive') || kl.includes('isdeleted') || kl.includes('istax') || kl.startsWith('is')) return "A true/false flag or status indicator (like Active or Deleted).";
+  if (kl.includes('remarks') || kl.includes('narration') || kl.includes('desc') || kl.includes('memo') || kl.includes('notes')) return "Any extra notes or remarks.";
+  if (kl.includes('phone') || kl.includes('mobile') || kl.includes('tel')) return "The phone number.";
+  if (kl.includes('email')) return "The contact's email address.";
+  if (kl.includes('address') || kl.includes('city') || kl.includes('state') || kl.includes('country') || kl.includes('zip')) return "The physical or billing address info.";
+  if (kl.includes('type') || kl.includes('category')) return "Indicates the type or category of the record.";
+  if (kl.includes('level') || kl.includes('hierarchy') || kl.includes('parent')) return "Used to organize records into a hierarchy tree.";
+  if (kl.includes('file') || kl.includes('attachment') || kl.includes('image') || kl.includes('photo')) return "The file, image, or attachment data.";
   
-  // Split camelCase for a generic fallback
-  return `Specifies the ${key.replace(/([A-Z])/g, ' $1').toLowerCase().trim()} for this transaction or entity.`;
+  if (key) return `The ${key.replace(/([A-Z])/g, ' $1').toLowerCase().trim()}.`;
+  return "";
 }
 
 function copyCode(btn) {
@@ -1088,43 +1076,60 @@ function copyCode(btn) {
   });
 }
 
-function copyCurl(btn, method, url, bodyJson) {
+function copyCurl(btn, method, url) {
   let curl = `curl --location --request ${method} '${url}' \\\n--header 'Authorization: Bearer <YOUR_TOKEN>' \\\n--header 'Content-Type: application/json'`;
   
-  if (bodyJson && method !== 'GET') {
-    const minified = JSON.stringify(JSON.parse(bodyJson));
-    curl += ` \\\n--data-raw '${minified}'`;
+  if (method !== 'GET') {
+    const codeEl = btn.closest('.code-wrapper')?.querySelector('code');
+    if (codeEl && codeEl.innerText.trim()) {
+      try {
+        const rawJson = codeEl.innerText.trim();
+        const minified = JSON.stringify(JSON.parse(rawJson));
+        curl += ` \\\n--data-raw '${minified}'`;
+      } catch (e) {
+        // Fallback if parsing fails
+        curl += ` \\\n--data-raw '${codeEl.innerText.trim()}'`;
+      }
+    }
   }
   
   navigator.clipboard.writeText(curl).then(() => {
     const original = btn.innerHTML;
-    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copied cURL!`;
-    setTimeout(() => btn.innerHTML = original, 2000);
+    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
+    btn.style.background = "#10b981"; // success green
+    btn.style.color = "white";
+    btn.style.borderColor = "#10b981";
+    setTimeout(() => {
+      btn.innerHTML = original;
+      btn.style = "";
+    }, 2000);
   });
 }
 
 function generateShortDesc(name, method, verbose = false) {
-  let action = "Retrieve";
+  let action = "Get";
   if (method === 'POST') action = "Create or update";
   else if (method === 'PUT') action = "Update";
-  else if (method === 'DELETE') action = "Remove";
+  else if (method === 'DELETE') action = "Delete";
 
   const cleanName = name.replace(/([A-Z])/g, ' $1').toLowerCase().trim();
   let baseDesc = "";
   
   if (cleanName.includes("list") || cleanName.includes("summary")) {
-    baseDesc = `${action} a list of ${cleanName.replace(/list|summary/g, '').trim()}.`;
+    baseDesc = `${action} a list of ${cleanName.replace(/list|summary/g, '').trim()} records.`;
   } else if (cleanName.includes("get") || cleanName.includes("details")) {
-    baseDesc = `${action} details for specified ${cleanName.replace(/get|details/g, '').trim()}.`;
+    baseDesc = `${action} the details of a specific ${cleanName.replace(/get|details/g, '').trim()}.`;
   } else if (cleanName.includes("save") || cleanName.includes("add")) {
-    baseDesc = `${action} or add new ${cleanName.replace(/save|add/g, '').trim()} records to the system.`;
+    baseDesc = `${action} a new ${cleanName.replace(/save|add/g, '').trim()} in the system.`;
   } else {
-    baseDesc = `${action} ${cleanName} information.`;
+    baseDesc = `${action} ${cleanName} data.`;
   }
 
   if (verbose) {
-    // Make it a more complete sentence for the main documentation section
-    return `This endpoint is used to ${baseDesc.charAt(0).toLowerCase() + baseDesc.slice(1)} It is a core part of the ${matchEndpointToEntity(name)?.entity || 'system'} workflow.`;
+    // Human-style conversational text
+    const entity = matchEndpointToEntity(name)?.entity || 'system';
+    const sentence = baseDesc.charAt(0).toUpperCase() + baseDesc.slice(1);
+    return `Use this endpoint to ${sentence.toLowerCase()} It's part of the **${entity}** flow.`;
   }
   
   return baseDesc;
