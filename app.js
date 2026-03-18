@@ -122,7 +122,6 @@ const MODULE_DESCRIPTIONS = {
   "General":   "System-wide endpoints for company config, dashboard data, notifications, custom data exports, and transaction management.",
   "Auth":      "Authentication endpoints to obtain and refresh Bearer tokens used by all secured API calls.",
   "Wallet":    "Digital wallet and QR payment endpoints (e.g., Fonepay integration).",
-  "Dugar":     "Client-specific endpoints for Dugar group's spare sales and job card workflows.",
   "WebSocket": "Real-time WebSocket endpoints for live push notifications and messaging.",
 };
 
@@ -247,12 +246,19 @@ function toggleSidebar(expand) {
 }
 
 // ─── Build Entity Buckets from All Items ──────────────────────────────────────
+// ─── Company-specific folders to exclude from the public documentation ─────
+const BLOCKED_FOLDERS = ['Dugar'];
+
 function buildEntityBuckets(allFolders) {
   const entityBuckets = {}; // entityName → { module, endpoints[] }
   const extraFolders = {}; // folderName → endpoints[] (Agent, Auth, etc.)
 
   for (const folder of allFolders) {
     const folderName = folder.name;
+
+    // Skip company-specific or blocked folders
+    if (BLOCKED_FOLDERS.includes(folderName)) continue;
+
     const items = folder.item || [];
 
     // Modules to be sub-categorized by entity
