@@ -620,6 +620,8 @@ There is currently no rate limit enforced on the API. However, it is recommended
   if (!data.item || !Array.isArray(data.item)) return;
 
   // ── Assign stable IDs to every endpoint first ──
+  let globalIdx = 0;
+  
   // Flatten nested Postman folder structures (handles v2 and v2.1 collections)
   function flattenItems(items, folderName, fi) {
     (items || []).forEach((ep, ei) => {
