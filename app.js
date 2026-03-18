@@ -1032,18 +1032,26 @@ function buildParamsTable(obj, parentId = '', rootName = "Request Body Parameter
 function generateFieldDesc(key) {
   const kl = key.toLowerCase();
   
+  if (kl === 'vouchername') return "The type of accounting voucher being created (e.g., <code>SalesInvoice</code>, <code>PurchaseOrder</code>). Determines how the transaction is categorized in the system.";
+  if (kl === 'narration') return "A free-text memo or note attached to the voucher, often used for discounts, adjustments, or internal remarks (e.g., <code>4%DISCOUNT</code>).";
+  if (kl === 'voucherdate') return "The date and time the voucher was issued, in <code>YYYY-MM-DD HH:MM:SS.mmm</code> format. Used for ledger posting and reporting purposes.";
+  if (kl === 'partyledgerid') return "The unique numeric ID of the customer or vendor ledger account this transaction is associated with. Must correspond to an existing party in the system.";
+  
   if (kl === 'searchby' || kl === 'searchvalue') return "Type what you're looking for to filter the results.";
-  if (kl === 'ledgertype' || kl === 'ledgergroupid' || kl === 'partyledgerid') return "The ID of the ledger or account group.";
-  if (kl === 'voucherid' || kl === 'vouchername' || kl === 'voucherdate' || kl === 'vouchertype') return "Details about the voucher, like its type and date.";
+  if (kl === 'ledgertype' || kl === 'ledgergroupid') return "The ID of the ledger or account group.";
+  if (kl === 'voucherid' || kl === 'vouchertype') return "Details about the voucher, like its type and date.";
   if (kl === 'datefrom' || kl === 'dateto') return "Used to filter records between specific dates.";
   if (kl === 'reporttype') return "Tells the API which report format you need.";
   if (kl === 'branchid') return "The ID of the branch or location.";
-  if (kl === 'refno' || kl === 'api_responseid') return "Your own reference number, useful for tracking.";
-  if (kl === 'itemallocationcoll' || kl === 'lineitems' || kl === 'details') return "The line items in this transaction.";
+  if (kl === 'refno') return "A user-defined reference number for tracking this transaction externally (e.g., an invoice or order number like <code>SBD-01270</code>).";
+  if (kl === 'api_responseid') return "The identifier returned or echoed back in the API response to help correlate the request with its result. Typically mirrors <code>RefNo</code>.";
+  if (kl === 'itemallocationcoll') return "An array of <code>ItemAllocationColl</code> objects representing the individual line items, their quantities, warehouse allocations, and related details for this voucher.";
+  if (kl === 'lineitems' || kl === 'details') return "The line items in this transaction.";
   if (kl === 'productid' || kl === 'itemid') return "The ID of the product or item.";
   if (kl === 'actualqty' || kl === 'billedqty' || kl === 'quantity') return "The actual quantity of the item.";
   if (kl === 'rate' || kl === 'price' || kl === 'unitprice') return "The price per unit.";
-  if (kl === 'salesinvoicedetail' || kl === 'billingaddress' || kl === 'shippingdetails') return "Extra customer and billing details.";
+  if (kl === 'salesinvoicedetail') return "A nested object containing the full financial breakdown of the sales invoice, including tax, totals, payment terms, and other invoice-level metadata.";
+  if (kl === 'billingaddress' || kl === 'shippingdetails') return "Extra customer and billing details.";
   if (kl === 'salestaxno' || kl === 'pan' || kl === 'vat') return "The company's tax registration number (VAT/PAN).";
   
   if (kl.endsWith('id')) {
@@ -1056,7 +1064,7 @@ function generateFieldDesc(key) {
   if (kl.includes('qty')) return "The quantity number.";
   if (kl.includes('code') || kl.includes('no') || kl.includes('number')) return "The code or serial number.";
   if (kl.includes('status') || kl.includes('isactive') || kl.includes('isdeleted') || kl.includes('istax') || kl.startsWith('is')) return "A true/false flag or status indicator (like Active or Deleted).";
-  if (kl.includes('remarks') || kl.includes('narration') || kl.includes('desc') || kl.includes('memo') || kl.includes('notes')) return "Any extra notes or remarks.";
+  if (kl.includes('remarks') || kl.includes('desc') || kl.includes('memo') || kl.includes('notes')) return "Any extra notes or remarks.";
   if (kl.includes('phone') || kl.includes('mobile') || kl.includes('tel')) return "The phone number.";
   if (kl.includes('email')) return "The contact's email address.";
   if (kl.includes('address') || kl.includes('city') || kl.includes('state') || kl.includes('country') || kl.includes('zip')) return "The physical or billing address info.";
