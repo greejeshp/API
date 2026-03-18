@@ -888,26 +888,43 @@ function createEndpointBlock(reqItem) {
   if (r.body) {
     if (r.body.mode === 'raw' && r.body.raw) {
       const raw = r.body.raw.trim();
-      try {
-        let fixed = raw.replace(/([a-zA-Z_][a-zA-Z0-9_]*)[\s]*:/g, '"$1":').replace(/'/g, '"');
-        const parsed = stripAutoFields(JSON.parse(fixed));
-        formattedJson = JSON.stringify(parsed, null, 2);
-      } catch {
+      let parsedObj = null;
+      
+      // Pass 1: Strict JSON
+      try { parsedObj = JSON.parse(raw); } catch (e) {}
+      
+      // Pass 2: Remove trailing commas and comments
+      if (!parsedObj) {
+        try {
+          let clean = raw.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '').replace(/,\s*([\]}])/g, '$1');
+          parsedObj = JSON.parse(clean);
+        } catch (e) {}
+      }
+      
+      // Pass 3: Fix unquoted keys
+      if (!parsedObj) {
+        try {
+          let fixed = raw.replace(/(['"])?([a-zA-Z0-9_]+)(['"])?\s*:/g, '"$2":').replace(/'/g, '"');
+          parsedObj = JSON.parse(fixed);
+        } catch (e) {}
+      }
+
+      if (parsedObj) {
+        parsedObj = stripAutoFields(parsedObj);
+        formattedJson = JSON.stringify(parsedObj, null, 2);
+        paramsHTML = buildParamsTable(parsedObj, id, "Request Body Parameters", 0, reqItem.name);
+      } else {
         formattedJson = raw;
       }
-      // Parse fields from JSON for table
-      try {
-        const obj = JSON.parse(formattedJson);
-        paramsHTML = buildParamsTable(obj, id);
-      } catch {}
     } else if (r.body.mode === 'formdata' && r.body.formdata?.length) {
       // Build table from formdata, collect JSON payload
       const fields = {};
       const rows = r.body.formdata
         .filter(fd => !isAutoField(fd.key))   // ← strip auto fields from formdata
         .map(fd => {
+        let desc = generateFieldDesc(fd.key);
         if (fd.type === 'file') {
-          return `<tr><td>${fd.key}</td><td><span class="type-pill">file</span></td><td><span class="muted">Binary attachment</span></td></tr>`;
+          return `<tr><td>${fd.key}</td><td><span class="type-pill">file</span></td><td><span class="muted">Binary attachment</span></td><td>${desc}</td></tr>`;
         }
         if (fd.value && fd.value.trim().startsWith('{')) {
           try {
@@ -916,13 +933,18 @@ function createEndpointBlock(reqItem) {
             formattedJson = JSON.stringify(parsed, null, 2);
             Object.assign(fields, parsed);
           } catch { formattedJson = fd.value; }
-          return `<tr><td>${fd.key}</td><td><span class="type-pill">json</span></td><td><span class="muted">(JSON body — see example below)</span></td></tr>`;
+          return `<tr><td>${fd.key}</td><td><span class="type-pill">json</span></td><td><span class="muted">(JSON body — see example below)</span></td><td>${desc}</td></tr>`;
         }
-        return `<tr><td>${fd.key}</td><td><span class="type-pill">${fd.type}</span></td><td>${fd.value || '—'}</td></tr>`;
+        return `<tr><td>${fd.key}</td><td><span class="type-pill">${fd.type}</span></td><td>${fd.value || '—'}</td><td>${desc}</td></tr>`;
       }).join('');
       if (rows) {
         paramsHTML = `<div class="section-label">Request Body (multipart/form-data)</div>
-          <table class="params-table"><thead><tr><th>Field</th><th>Type</th><th>Value</th></tr></thead><tbody>${rows}</tbody></table>`;
+          <table class="params-table"><thead><tr><th>Field</th><th>Type</th><th>Example Value</th><th>Description</th></tr></thead><tbody>${rows}</tbody></table>`;
+          
+        if (Object.keys(fields).length > 0) {
+          // Append the nested table for the JSON payload cleanly
+          paramsHTML += buildParamsTable(fields, id, "Embedded JSON Properties", 1, reqItem.name);
+        }
       }
     }
   }
@@ -975,15 +997,22 @@ function createEndpointBlock(reqItem) {
           ${r.description ? marked.parse(r.description) : `<p>${generateShortDesc(reqItem.name, method, true)}</p>`}
         </div>
         ${queryHTML}
-        ${paramsHTML}
         ${codeHTML}
+        ${paramsHTML}
       </div>
     </div>
   `;
 }
 
-function buildParamsTable(obj, parentId = '', rootName = "Request Body Parameters", level = 0) {
-  if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) return '';
+function buildParamsTable(obj, parentId = '', rootName = "Request Body Parameters", level = 0, endpointName = '') {
+  if (typeof obj !== 'object' || obj === null) return '';
+  
+  if (Array.isArray(obj)) {
+    if (obj.length > 0 && typeof obj[0] === 'object' && obj[0] !== null) {
+      return buildParamsTable(obj[0], parentId, `${rootName} (Array of Objects)`, level, endpointName);
+    }
+    return '';
+  }
   
   let html = '';
   const subTables = [];
@@ -1009,10 +1038,16 @@ function buildParamsTable(obj, parentId = '', rootName = "Request Body Parameter
       subTables.push({ key: k, data: v, type: 'object', subId });
     } else {
       display = String(v);
+      // specific user request: blank out example values for Get Ledger Group List
+      if (endpointName.replace(/\s+/g, '').toLowerCase() === 'getledgergrouplist') {
+        display = '';
+      }
     }
     
     return `<tr><td>${k}</td><td><span class="type-pill">${type}</span></td><td>${display}</td><td>${desc}</td></tr>`;
   }).join('');
+  
+  if (!rows) return ''; // Don't render empty tables
   
   const titleHtml = level === 0 
     ? `<div class="section-label">${rootName}</div>`
@@ -1023,7 +1058,7 @@ function buildParamsTable(obj, parentId = '', rootName = "Request Body Parameter
   // Render nested tables immediately below
   for (const sub of subTables) {
     const subTitle = sub.type === 'array' ? `${sub.key} (Array Item)` : `${sub.key} (Object)`;
-    html += buildParamsTable(sub.data, sub.subId, subTitle, level + 1);
+    html += buildParamsTable(sub.data, sub.subId, subTitle, level + 1, endpointName);
   }
   
   return html;
@@ -1115,29 +1150,39 @@ function copyCurl(btn, method, url) {
 }
 
 function generateShortDesc(name, method, verbose = false) {
-  let action = "Get";
-  if (method === 'POST') action = "Create or update";
-  else if (method === 'PUT') action = "Update";
-  else if (method === 'DELETE') action = "Delete";
-
   const cleanName = name.replace(/([A-Z])/g, ' $1').toLowerCase().trim();
-  let baseDesc = "";
+  const noun = cleanName.replace(/get|list|summary|save|add|details|delete|update/g, '').trim() || 'record';
   
-  if (cleanName.includes("list") || cleanName.includes("summary")) {
-    baseDesc = `${action} a list of ${cleanName.replace(/list|summary/g, '').trim()} records.`;
-  } else if (cleanName.includes("get") || cleanName.includes("details")) {
-    baseDesc = `${action} the details of a specific ${cleanName.replace(/get|details/g, '').trim()}.`;
-  } else if (cleanName.includes("save") || cleanName.includes("add")) {
-    baseDesc = `${action} a new ${cleanName.replace(/save|add/g, '').trim()} in the system.`;
+  const isListRetrieval = cleanName.includes('list') || cleanName.includes('summary') || cleanName.includes('search') || cleanName.includes('report') || cleanName.includes('all');
+  const isRetrieval = method === 'GET' || method === 'POST';
+  
+  let baseDesc = "";
+  let businessOverview = "";
+
+  if (isRetrieval) {
+    if (isListRetrieval) {
+      baseDesc = `Retrieves a paginated list of ${noun} records.`;
+      businessOverview = `Use this endpoint to query multiple records and build summary reporting views.`;
+    } else {
+      baseDesc = `Retrieves the details of a specific ${noun}.`;
+      businessOverview = `Use this endpoint to fetch the complete structured profile for a single record using its unique identifier.`;
+    }
+  } else if (method === 'PUT') {
+    baseDesc = `Creates or updates a ${noun} record.`;
+    businessOverview = `Use this endpoint to securely record a new transaction or overwrite an existing entity in the core system.`;
+  } else if (method === 'DELETE') {
+    baseDesc = `Permanently deletes the specified ${noun}.`;
+    businessOverview = `This action removes the record from the active database and cannot be undone.`;
   } else {
-    baseDesc = `${action} ${cleanName} data.`;
+    baseDesc = `Executes the ${cleanName} operation.`;
+    businessOverview = `Use this endpoint to interact with the system via standard HTTP methods.`;
   }
 
   if (verbose) {
-    // Human-style conversational text
     const entity = matchEndpointToEntity(name)?.entity || 'system';
-    const sentence = baseDesc.charAt(0).toUpperCase() + baseDesc.slice(1);
-    return `Use this endpoint to ${sentence.toLowerCase()} It's part of the **${entity}** flow.`;
+    const entityDesc = ENTITY_DESCRIPTIONS[entity] || '';
+    
+    return `<strong>${baseDesc}</strong><br><br>${businessOverview} Integrating this endpoint allows your application to programmatically manage <strong>${entity}</strong> workflows.${entityDesc ? `<br><br><span style="border-left: 3px solid var(--xero-blue); padding-left: 12px; display: block; color: var(--text-secondary); background: var(--hover-bg); padding: 10px 15px; border-radius: 4px;"><em><strong>Business Context:</strong> ${entityDesc}</em></span>` : ''}`;
   }
   
   return baseDesc;
