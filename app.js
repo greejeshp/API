@@ -169,13 +169,24 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById('postman-upload').addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    if (!file.name.endsWith('.json')) {
+      alert('Please upload a valid Postman Collection JSON file (.json).');
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
-        renderDocumentation(JSON.parse(event.target.result));
-        showToast("Collection loaded!");
+        const parsed = JSON.parse(event.target.result);
+        // Validate it's a Postman collection
+        if (!parsed.info || !parsed.item || !Array.isArray(parsed.item)) {
+          alert('Invalid Postman Collection. File must contain "info" and "item" arrays at the top level.');
+          return;
+        }
+        renderDocumentation(parsed);
+        showToast(`✅ Collection "${parsed.info.name || 'Unnamed'}" loaded successfully!`);
       } catch (err) {
-        alert("Invalid JSON file.");
+        console.error('[Upload Error]', err);
+        alert(`Failed to parse JSON file.\n\nError: ${err.message}`);
       }
     };
     reader.readAsText(file);
@@ -250,8 +261,22 @@ function toggleSidebar(expand) {
 const BLOCKED_FOLDERS = ['Dugar'];
 
 function buildEntityBuckets(allFolders) {
-  const entityBuckets = {}; // entityName → { module, endpoints[] }
-  const extraFolders = {}; // folderName → endpoints[] (Agent, Auth, etc.)
+  const entityBuckets = {};
+  const extraFolders = {};
+
+  // Recursive helper to collect all endpoint items from possibly-nested folders
+  function collectEndpoints(items) {
+    const result = [];
+    (items || []).forEach(item => {
+      if (item.request) {
+        result.push(item);
+      } else if (item.item) {
+        // Sub-folder: recurse
+        result.push(...collectEndpoints(item.item));
+      }
+    });
+    return result;
+  }
 
   for (const folder of allFolders) {
     const folderName = folder.name;
@@ -259,7 +284,7 @@ function buildEntityBuckets(allFolders) {
     // Skip company-specific or blocked folders
     if (BLOCKED_FOLDERS.includes(folderName)) continue;
 
-    const items = folder.item || [];
+    const items = collectEndpoints(folder.item);
 
     // Modules to be sub-categorized by entity
     const subModules = ['Account', 'Inventory', 'Agent', 'Employee', 'General'];
@@ -595,12 +620,21 @@ There is currently no rate limit enforced on the API. However, it is recommended
   if (!data.item || !Array.isArray(data.item)) return;
 
   // ── Assign stable IDs to every endpoint first ──
-  let globalIdx = 0;
-  data.item.forEach((folder, fi) => {
-    (folder.item || []).forEach((ep, ei) => {
-      ep._endpointId = `ep-${fi}-${ei}`;
-      ep._globalIdx = globalIdx++;
+  // Flatten nested Postman folder structures (handles v2 and v2.1 collections)
+  function flattenItems(items, folderName, fi) {
+    (items || []).forEach((ep, ei) => {
+      if (ep.item && Array.isArray(ep.item)) {
+        // Sub-folder — recurse but keep top-level folder name for entity mapping
+        flattenItems(ep.item, folderName, fi);
+      } else if (ep.request) {
+        ep._endpointId = `ep-${fi}-${ei}`;
+        ep._globalIdx = globalIdx++;
+      }
     });
+  }
+
+  data.item.forEach((folder, fi) => {
+    flattenItems(folder.item, folder.name, fi);
   });
 
   // ── Build entity buckets ──

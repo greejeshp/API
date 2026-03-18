@@ -1,0 +1,100 @@
+{
+  "info": {
+    "_postman_id": "test-001",
+    "name": "Test Postman Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "GetToken",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "url": {
+              "raw": "{{URL}}/v1/Auth/GetToken",
+              "host": ["{{URL}}"],
+              "path": ["v1", "Auth", "GetToken"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"UserName\": \"admin\", \"Password\": \"Test@123\"}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Account",
+      "item": [
+        {
+          "name": "GetLedgerGroupList",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{"key": "token", "value": "TEST"}] },
+            "method": "POST",
+            "url": {
+              "raw": "{{URL}}/v1/Account/GetLedgerGroupList",
+              "host": ["{{URL}}"],
+              "path": ["v1", "Account", "GetLedgerGroupList"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"SearchBy\": \"Name\", \"SearchValue\": \"Cash\", \"DateFrom\": \"2024-01-01\", \"DateTo\": \"2024-12-31\"}"
+            }
+          }
+        },
+        {
+          "name": "SaveJournal",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{"key": "token", "value": "TEST"}] },
+            "method": "POST",
+            "url": {
+              "raw": "{{URL}}/v1/Account/SaveJournal",
+              "host": ["{{URL}}"],
+              "path": ["v1", "Account", "SaveJournal"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"VoucherDate\": \"2024-04-01\", \"Narration\": \"Test Journal\", \"JournalDetails\": [{\"LedgerId\": 10, \"DrAmount\": 5000.00, \"CrAmount\": 0.00}, {\"LedgerId\": 20, \"DrAmount\": 0.00, \"CrAmount\": 5000.00}]}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inventory",
+      "item": [
+        {
+          "name": "AddSalesInvoice",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{"key": "token", "value": "TEST"}] },
+            "method": "POST",
+            "url": {
+              "raw": "{{URL}}/v1/Inventory/AddSalesInvoice",
+              "host": ["{{URL}}"],
+              "path": ["v1", "Inventory", "AddSalesInvoice"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"VoucherName\": \"SalesInvoice\", \"Narration\": \"4% DISCOUNT\", \"VoucherDate\": \"2024-04-04\", \"PartyLedgerId\": \"68\", \"RefNo\": \"SBD-01270\", \"ItemAllocationColl\": [{\"ProductId\": 55, \"ActualQty\": 60, \"Rate\": 43.88, \"Amount\": 2632.80}], \"SalesInvoiceDetail\": {\"Buyes\": \"MEGA MART PVT.LTD\", \"Address\": \"KATHMANDU\", \"SalesTaxNo\": \"303408110\"}}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dugar",
+      "item": [
+        {
+          "name": "Dugar-SpareSales",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{URL}}/v1/Dugar/SpareSales" }
+          }
+        }
+      ]
+    }
+  ]
+}
