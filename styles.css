@@ -889,3 +889,76 @@ pre[class*="language-"] {
   white-space: nowrap;
 }
 
+/* ── PrismJS Syntax Highlighting (High Contrast) ───────────────────────────── */
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: #94a3b8;
+}
+
+.token.punctuation {
+  color: #e2e8f0;
+}
+
+.token.property,
+.token.tag,
+.token.constant,
+.token.symbol,
+.token.deleted {
+  color: #a5b4fc; /* Brighter Indigo for keys */
+  font-weight: 600;
+}
+
+.token.boolean,
+.token.number {
+  color: #fb7185; /* Vibrant Rose for numbers */
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+  color: #4ade80; /* Bright Green for values */
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string,
+.token.variable {
+  color: #fbbf24;
+}
+
+.token.atrule,
+.token.attr-value,
+.token.function,
+.token.class-name {
+  color: #60a5fa;
+}
+
+.token.keyword {
+  color: #f87171;
+}
+
+.token.regex,
+.token.important {
+  color: #fbbf24;
+}
+
+.token.important,
+.token.bold {
+  font-weight: bold;
+}
+
+.token.italic {
+  font-style: italic;
+}
+
+.token.entity {
+  cursor: help;
+}
+

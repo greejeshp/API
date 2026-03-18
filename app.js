@@ -562,6 +562,23 @@ There is currently no rate limit enforced on the API. However, it is recommended
         <li><strong>Batching:</strong> Use bulk upload endpoints where available for large data synchronization.</li>
         <li><strong>Caching:</strong> Cache static metadata (Units, Categories, Groups) locally and refresh periodically.</li>
       </ul>
+
+      <h2 id="overview-pagination">Pagination</h2>
+      <p>All list-based endpoints support pagination to handle large datasets efficiently. Use the following query parameters alongside your GET or POST searches:</p>
+      <table>
+        <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>pageSize</code></td><td>number</td><td>Number of records per page (Default: 50, Max: 500).</td></tr>
+          <tr><td><code>pageNumber</code></td><td>number</td><td>The page index you want to retrieve (starts at 1).</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="overview-idempotency">Idempotency</h2>
+      <p>For operations that modify critical data (like creating an Invoice), we recommend implementing <strong>Idempotency</strong> to prevent accidental double-postings in case of network timeouts.</p>
+      <ul>
+        <li>If your system supports it, include an <code>Idempotency-Key</code> header with a unique string (like a UUID) for the transaction.</li>
+        <li>If a request with the same key is received by the ERP, it will bypass creation and return the previously successful response.</li>
+      </ul>
     </div>
   `;
 
@@ -644,6 +661,9 @@ There is currently no rate limit enforced on the API. However, it is recommended
   }
 
   if (window.Prism) Prism.highlightAll();
+
+  // Initialize Right Navigation (TOC & ScrollSpy)
+  buildTableOfContents();
 }
 
 // ─── Endpoints Summary Section ────────────────────────────────────────────────
@@ -660,11 +680,12 @@ function renderEndpointsSummary(entityBuckets, extraFolders, container) {
           const method = ep.request?.method || 'GET';
           const url = ep.request?.url?.raw || ep.request?.url || '—';
           const mc = getMethodColorClass(method);
+          const desc = generateShortDesc(ep.name, method);
           return `<tr>
-            <td><span class="sum-entity-tag">${en}</span></td>
-            <td><span class="method-badge ${mc}-bg" style="font-size:0.6rem;padding:2px 7px">${method}</span></td>
             <td><a href="#${ep._endpointId}" class="sum-ep-link">${ep.name}</a></td>
-            <td class="sum-url">${url}</td>
+            <td><span class="method-badge ${mc}-bg" style="font-size:0.6rem;padding:2px 7px">${method}</span></td>
+            <td class="sum-url">${url.replace(/\{\{URL\}\}/g, BASE_URL)}</td>
+            <td class="sum-desc">${desc}</td>
           </tr>`;
         });
       }).join('');
@@ -674,11 +695,12 @@ function renderEndpointsSummary(entityBuckets, extraFolders, container) {
     const method = ep.request?.method || 'GET';
     const url = ep.request?.url?.raw || ep.request?.url || '—';
     const mc = getMethodColorClass(method);
+    const desc = generateShortDesc(ep.name, method);
     return `<tr>
-      <td><span class="sum-entity-tag">${folderName}</span></td>
-      <td><span class="method-badge ${mc}-bg" style="font-size:0.6rem;padding:2px 7px">${method}</span></td>
       <td><a href="#${ep._endpointId}" class="sum-ep-link">${ep.name}</a></td>
-      <td class="sum-url">${url}</td>
+      <td><span class="method-badge ${mc}-bg" style="font-size:0.6rem;padding:2px 7px">${method}</span></td>
+      <td class="sum-url">${url.replace(/\{\{URL\}\}/g, BASE_URL)}</td>
+      <td class="sum-desc">${desc}</td>
     </tr>`;
   }).join('');
 
@@ -708,7 +730,7 @@ function renderEndpointsSummary(entityBuckets, extraFolders, container) {
             <span class="summary-module-count">${count} endpoints</span>
           </div>
           <table class="summary-table">
-            <thead><tr><th>Entity</th><th>Method</th><th>Name</th><th>URL</th></tr></thead>
+            <thead><tr><th>Name</th><th>Method</th><th>URL</th><th>Description</th></tr></thead>
             <tbody>${buildModuleRows(modName)}</tbody>
           </table>
         </div>`;
@@ -725,7 +747,7 @@ function renderEndpointsSummary(entityBuckets, extraFolders, container) {
           <span class="summary-module-count">${endpoints.length} endpoints</span>
         </div>
         <table class="summary-table">
-          <thead><tr><th>Entity</th><th>Method</th><th>Name</th><th>URL</th></tr></thead>
+          <thead><tr><th>Name</th><th>Method</th><th>URL</th><th>Description</th></tr></thead>
           <tbody>${buildExtraRows(folderName, endpoints)}</tbody>
         </table>
       </div>`;
@@ -770,6 +792,8 @@ const AUTO_FIELDS = new Set([
   'rowversion', 'RowVersion', 'timestamp', 'Timestamp',
   // Server-assigned sequence / version
   'seqno', 'SeqNo', 'version', 'Version',
+  // Redundant IDs that are auto-generated
+  'voucherid', 'ledgerid', 'id_auto'
 ]);
 
 // Check if a field key should be stripped
@@ -842,7 +866,7 @@ function createEndpointBlock(reqItem) {
       // Parse fields from JSON for table
       try {
         const obj = JSON.parse(formattedJson);
-        paramsHTML = buildParamsTable(obj);
+        paramsHTML = buildParamsTable(obj, id);
       } catch {}
     } else if (r.body.mode === 'formdata' && r.body.formdata?.length) {
       // Build table from formdata, collect JSON payload
@@ -888,10 +912,16 @@ function createEndpointBlock(reqItem) {
       <div class="section-label">Example Request Body</div>
       <div class="code-wrapper">
         <div class="code-header">
-          <span class="code-lang">JSON</span>
+          <div class="code-header-left">
+            <span class="code-lang">JSON</span>
+            <button class="curl-btn" onclick="copyCurl(this, '${method}', '${urlRaw.replace(/\{\{URL\}\}/g, BASE_URL)}', ${formattedJson ? JSON.stringify(formattedJson) : 'null'})">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 17l6-6-6-6M12 19h8"/></svg>
+              Copy as cURL
+            </button>
+          </div>
           <button class="copy-btn" onclick="copyCode(this)">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            Copy
+            Copy JSON
           </button>
         </div>
         <pre><code class="language-json">${escaped}</code></pre>
@@ -909,7 +939,9 @@ function createEndpointBlock(reqItem) {
           <span class="method-badge ${methodCls}-bg">${method}</span>
           <span class="url-path">${urlRaw.replace(/\{\{URL\}\}/g, BASE_URL)}</span>
         </div>
-        ${r.description ? `<div class="markdown-body card-desc">${marked.parse(r.description)}</div>` : ''}
+        <div class="markdown-body card-desc">
+          ${r.description ? marked.parse(r.description) : `<p>${generateShortDesc(reqItem.name, method, true)}</p>`}
+        </div>
         ${queryHTML}
         ${paramsHTML}
         ${codeHTML}
@@ -918,21 +950,243 @@ function createEndpointBlock(reqItem) {
   `;
 }
 
-function buildParamsTable(obj) {
+function buildParamsTable(obj, parentId = '', rootName = "Request Body Parameters", level = 0) {
   if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) return '';
+  
+  let html = '';
+  const subTables = [];
+  
   const rows = Object.entries(obj).map(([k, v]) => {
     const type = Array.isArray(v) ? 'array' : typeof v;
-    const display = Array.isArray(v) ? '<span class="muted">[array]</span>' : String(v);
-    return `<tr><td>${k}</td><td><span class="type-pill">${type}</span></td><td>${display}</td></tr>`;
+    let display = '';
+    let desc = generateFieldDesc(k);
+    
+    if (type === 'array') {
+      if (v.length > 0 && typeof v[0] === 'object' && v[0] !== null) {
+        const subId = `${parentId}-${k}`;
+        display = `<a href="#${subId}" class="sum-ep-link" style="text-decoration:underline;color:var(--xero-blue)">See ${k}</a>`;
+        desc = `Collection of ${k} elements.`;
+        subTables.push({ key: k, data: v[0], type: 'array', subId });
+      } else {
+        display = `<span class="muted">[array]</span>`;
+      }
+    } else if (type === 'object' && v !== null) {
+      const subId = `${parentId}-${k}`;
+      display = `<a href="#${subId}" class="sum-ep-link" style="text-decoration:underline;color:var(--xero-blue)">See ${k}</a>`;
+      desc = `Detailed ${k} object.`;
+      subTables.push({ key: k, data: v, type: 'object', subId });
+    } else {
+      display = String(v);
+    }
+    
+    return `<tr><td>${k}</td><td><span class="type-pill">${type}</span></td><td>${display}</td><td>${desc}</td></tr>`;
   }).join('');
-  return `<div class="section-label">Request Body Parameters</div>
-    <table class="params-table"><thead><tr><th>Field</th><th>Type</th><th>Example Value</th></tr></thead><tbody>${rows}</tbody></table>`;
+  
+  const titleHtml = level === 0 
+    ? `<div class="section-label">${rootName}</div>`
+    : `<div class="section-label" id="${parentId}" style="margin-top:20px; font-size: 0.85rem; color: var(--xero-mid-blue);">↳ ${rootName}</div>`;
+    
+  html += `${titleHtml}<table class="params-table"><thead><tr><th>Field</th><th>Type</th><th>Example Value</th><th>Description</th></tr></thead><tbody>${rows}</tbody></table>`;
+  
+  // Render nested tables immediately below
+  for (const sub of subTables) {
+    const subTitle = sub.type === 'array' ? `${sub.key} (Array Item)` : `${sub.key} (Object)`;
+    html += buildParamsTable(sub.data, sub.subId, subTitle, level + 1);
+  }
+  
+  return html;
+}
+
+function generateFieldDesc(key) {
+  const kl = key.toLowerCase();
+  
+  // Specific Exact ERP Matches
+  if (kl === 'searchby' || kl === 'searchvalue') return "Filter parameter used to search for matching records.";
+  if (kl === 'ledgertype' || kl === 'ledgergroupid' || kl === 'partyledgerid') return "Internal reference ID linking to a specific accounting Ledger or Account Group.";
+  if (kl === 'voucherid' || kl === 'vouchername' || kl === 'voucherdate' || kl === 'vouchertype') return "Core transaction data defining the accounting voucher type, identity, or date of activity.";
+  if (kl === 'datefrom' || kl === 'dateto') return "Date boundary used for filtering transactions and reporting data.";
+  if (kl === 'reporttype') return "Identifier representing the format or specific structure of the requested report.";
+  if (kl === 'branchid') return "Organizational branch or location identifier for multi-location businesses.";
+  if (kl === 'refno' || kl === 'api_responseid') return "External reference number or API transaction ID used for idempotency/tracking.";
+  if (kl === 'itemallocationcoll' || kl === 'lineitems' || kl === 'details') return "Collection of line items mapping products, quantities, and rates for the given transaction.";
+  if (kl === 'productid' || kl === 'itemid') return "Unique identifier for the inventory product, material, or service item.";
+  if (kl === 'actualqty' || kl === 'billedqty' || kl === 'quantity') return "Physical unit quantity being transacted or adjusted.";
+  if (kl === 'rate' || kl === 'price' || kl === 'unitprice') return "Unit price or exchange rate applicable to the specific line item.";
+  if (kl === 'salesinvoicedetail' || kl === 'billingaddress' || kl === 'shippingdetails') return "Extended customer, tax, and address details necessary for formal billing and compliance.";
+  if (kl === 'salestaxno' || kl === 'pan' || kl === 'vat') return "Official government tax registration number (VAT/PAN).";
+  
+  // Broad Generic Matches
+  if (kl.endsWith('id')) {
+    const noun = key.replace(/([A-Z])/g, ' $1').replace(/id/ig, '').trim().toLowerCase();
+    return `Unique reference identifier for the associated ${noun || 'entity'}.`;
+  }
+  if (kl.includes('name') || kl === 'buyes') return "Human-readable name or text label describing this element.";
+  if (kl.includes('date') || kl.includes('time')) return "Date/Time value, expected in YYYY-MM-DD or standard robust ISO formats.";
+  if (kl.includes('amount') || kl.includes('discount') || kl.includes('tax') || kl.includes('total')) return "Financial numeric value used for pricing, taxes, or subtotal calculations.";
+  if (kl.includes('qty')) return "Numeric value representing a countable stock or service quantity.";
+  if (kl.includes('code') || kl.includes('no') || kl.includes('number')) return "System-specific alphanumeric identification code, serial, or registration number.";
+  if (kl.includes('status') || kl.includes('isactive') || kl.includes('isdeleted') || kl.includes('istax') || kl.startsWith('is')) return "State flag indicating operational status or binary characteristics (e.g., True/False, Active/Inactive).";
+  if (kl.includes('remarks') || kl.includes('narration') || kl.includes('desc') || kl.includes('memo') || kl.includes('notes')) return "Additional textual notes, description, or accounting narration for context.";
+  if (kl.includes('phone') || kl.includes('mobile') || kl.includes('tel')) return "Contact telephone or mobile capability number.";
+  if (kl.includes('email')) return "Electronic mail address for business correspondence.";
+  if (kl.includes('address') || kl.includes('city') || kl.includes('state') || kl.includes('country') || kl.includes('zip')) return "Physical location or geographical billing/shipping details.";
+  if (kl.includes('type') || kl.includes('category')) return "Classification parameter denoting the category, nature, or type of the record.";
+  if (kl.includes('level') || kl.includes('hierarchy') || kl.includes('parent')) return "Structural configuration value defining the hierarchical position (e.g., account group level).";
+  if (kl.includes('file') || kl.includes('attachment') || kl.includes('image') || kl.includes('photo')) return "Binary multipart file, image URL, or base64 encoded data for an attachment.";
+  
+  // Split camelCase for a generic fallback
+  return `Specifies the ${key.replace(/([A-Z])/g, ' $1').toLowerCase().trim()} for this transaction or entity.`;
 }
 
 function copyCode(btn) {
   const code = btn.closest('.code-wrapper').querySelector('code').innerText;
   navigator.clipboard.writeText(code).then(() => {
-    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 12 4 18"/></svg> Copied!`;
-    setTimeout(() => btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy`, 2000);
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
+    setTimeout(() => btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy JSON`, 2000);
   });
+}
+
+function copyCurl(btn, method, url, bodyJson) {
+  let curl = `curl --location --request ${method} '${url}' \\\n--header 'Authorization: Bearer <YOUR_TOKEN>' \\\n--header 'Content-Type: application/json'`;
+  
+  if (bodyJson && method !== 'GET') {
+    const minified = JSON.stringify(JSON.parse(bodyJson));
+    curl += ` \\\n--data-raw '${minified}'`;
+  }
+  
+  navigator.clipboard.writeText(curl).then(() => {
+    const original = btn.innerHTML;
+    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copied cURL!`;
+    setTimeout(() => btn.innerHTML = original, 2000);
+  });
+}
+
+function generateShortDesc(name, method, verbose = false) {
+  let action = "Retrieve";
+  if (method === 'POST') action = "Create or update";
+  else if (method === 'PUT') action = "Update";
+  else if (method === 'DELETE') action = "Remove";
+
+  const cleanName = name.replace(/([A-Z])/g, ' $1').toLowerCase().trim();
+  let baseDesc = "";
+  
+  if (cleanName.includes("list") || cleanName.includes("summary")) {
+    baseDesc = `${action} a list of ${cleanName.replace(/list|summary/g, '').trim()}.`;
+  } else if (cleanName.includes("get") || cleanName.includes("details")) {
+    baseDesc = `${action} details for specified ${cleanName.replace(/get|details/g, '').trim()}.`;
+  } else if (cleanName.includes("save") || cleanName.includes("add")) {
+    baseDesc = `${action} or add new ${cleanName.replace(/save|add/g, '').trim()} records to the system.`;
+  } else {
+    baseDesc = `${action} ${cleanName} information.`;
+  }
+
+  if (verbose) {
+    // Make it a more complete sentence for the main documentation section
+    return `This endpoint is used to ${baseDesc.charAt(0).toLowerCase() + baseDesc.slice(1)} It is a core part of the ${matchEndpointToEntity(name)?.entity || 'system'} workflow.`;
+  }
+  
+  return baseDesc;
+}
+
+// ─── Right Navigation (Table of Contents & ScrollSpy) ─────────────────────────
+function buildTableOfContents() {
+  const container = document.getElementById('right-nav-content');
+  if (!container) return;
+  container.innerHTML = '';
+  
+  // Select all major headers inside the content-area
+  const headers = document.querySelectorAll('.content-area h1#overview-intro-h, .content-area h2, .content-area .entity-heading');
+  
+  if (headers.length === 0) return;
+  
+  headers.forEach(header => {
+    // Ensure the header has an ID so we can link to it
+    if (!header.id) {
+      const parentId = header.closest('.entity-section-header')?.id;
+      if (parentId) {
+        header.id = parentId + '-h';
+      } else {
+        header.id = 'sec-' + Math.random().toString(36).substring(2, 9);
+      }
+    }
+    
+    // Determine hierarchy level
+    const isMainSection = header.tagName.toLowerCase() !== 'h3';
+    
+    const link = document.createElement('a');
+    link.className = 'toc-link';
+    link.href = '#' + header.id;
+    link.textContent = header.textContent.trim();
+    
+    if (!isMainSection) {
+      link.style.paddingLeft = '24px'; // Indent sub-sections (entities)
+      link.style.opacity = '0.85';
+    } else {
+      link.style.fontWeight = '600';
+      link.style.marginTop = '6px';
+    }
+    
+    // Smooth scroll on click (overriding default anchor behavior slightly for smoothness)
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = document.querySelector('#' + header.id);
+      if (target) {
+        // Find the scrollable container and scroll to target
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+    
+    container.appendChild(link);
+  });
+  
+  initScrollSpy();
+}
+
+function initScrollSpy() {
+  const headers = Array.from(document.querySelectorAll('.content-area h1#overview-intro-h, .content-area h2, .content-area .entity-heading'));
+  const tocLinks = document.querySelectorAll('.toc-link');
+  
+  if (headers.length === 0 || tocLinks.length === 0) return;
+  
+  const contentArea = document.querySelector('.content-area');
+  
+  contentArea.addEventListener('scroll', () => {
+    let currentActive = null;
+    
+    // Find the header closest to the top
+    for (let i = 0; i < headers.length; i++) {
+        const header = headers[i];
+        const rect = header.getBoundingClientRect();
+        
+        // If the header is above or near the top of the viewport
+        if (rect.top <= 180) {
+            currentActive = header;
+        } else {
+            break; 
+        }
+    }
+    
+    if (!currentActive && headers.length > 0) {
+        currentActive = headers[0];
+    }
+    
+    if (currentActive) {
+      tocLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + currentActive.id) {
+          link.classList.add('active');
+          // Auto-scroll the right-nav if the active link gets out of view
+          const navContainer = document.getElementById('right-nav-content');
+          const linkRect = link.getBoundingClientRect();
+          const navRect = navContainer.getBoundingClientRect();
+          if (linkRect.top < navRect.top || linkRect.bottom > navRect.bottom) {
+             link.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        }
+      });
+    }
+  }, { passive: true });
+  
+  // Trigger once to set initial state
+  contentArea.dispatchEvent(new Event('scroll'));
 }
