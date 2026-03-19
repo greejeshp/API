@@ -1150,6 +1150,24 @@ function copyCurl(btn, method, url) {
 }
 
 function generateShortDesc(name, method, verbose = false) {
+  const exactOverrides = {
+    'SalesmanWisePartyList': 'Retrieves a list of parties grouped by salesman based on provided filters for sales and receivables analysis.',
+    'GetPartyDuesBill': 'Retrieves party-wise outstanding dues and bill details based on provided filters for receivables tracking.',
+    'CostCenterClosing': 'Retrieves cost center closing details based on provided parameters for financial period-end analysis.',
+    'LedgerDetails': 'Retrieves detailed ledger account information based on provided filters or identifiers.',
+    'GetLedgerVoucherDet': 'Retrieves ledger voucher details based on provided filters for transaction-level analysis.',
+    'LedgerVoucher': 'Retrieves ledger voucher data based on provided filters for financial transaction tracking.',
+    'PrintLedgerVoucherDet': 'Retrieves formatted ledger voucher details for printing based on provided filters.',
+    'GetDebtorType': 'Retrieves debtor type details based on provided filters for customer classification.',
+    'GetLedgerCategory': 'Retrieves ledger category details based on provided filters for account classification.',
+    'GetLedgerChannel': 'Retrieves ledger channel details based on provided filters for business segmentation.'
+  };
+
+  if (exactOverrides[name]) {
+    let baseDesc = exactOverrides[name];
+    return verbose ? `<strong>${baseDesc}</strong>` : baseDesc;
+  }
+
   const cleanName = name.replace(/([A-Z])/g, ' $1').toLowerCase().trim();
   const noun = cleanName.replace(/get|list|summary|save|add|details|delete|update/g, '').trim() || 'record';
   
@@ -1159,30 +1177,29 @@ function generateShortDesc(name, method, verbose = false) {
   let baseDesc = "";
   let businessOverview = "";
 
+  const entity = matchEndpointToEntity(name)?.entity || 'system';
+
   if (isRetrieval) {
     if (isListRetrieval) {
-      baseDesc = `Retrieves a paginated list of ${noun} records.`;
-      businessOverview = `Use this endpoint to query multiple records and build summary reporting views.`;
+      baseDesc = `Retrieves detailed ${noun} information based on provided filters or identifiers.`;
+      businessOverview = `Use this endpoint to query multiple <strong>${noun}</strong> records from the system. By integrating this list view, your application can populate UI dropdowns, build custom dashboards, and perform bulk analysis on ${noun} data within the ${entity} flow.`;
     } else {
       baseDesc = `Retrieves the details of a specific ${noun}.`;
-      businessOverview = `Use this endpoint to fetch the complete structured profile for a single record using its unique identifier.`;
+      businessOverview = `Use this endpoint to fetch the complete structured profile for a single <strong>${noun}</strong> using its unique identifier. This is primarily used to view deep-dive metrics for a specific ${noun} or to load a record's current state prior to synchronization.`;
     }
   } else if (method === 'PUT') {
     baseDesc = `Creates or updates a ${noun} record.`;
-    businessOverview = `Use this endpoint to securely record a new transaction or overwrite an existing entity in the core system.`;
+    businessOverview = `Use this endpoint to securely commit a new <strong>${noun}</strong> transaction or overwrite an existing entity in the core system. Pushing this payload ensures your external application and the ERP's ${noun} records remain perfectly synchronized.`;
   } else if (method === 'DELETE') {
     baseDesc = `Permanently deletes the specified ${noun}.`;
-    businessOverview = `This action removes the record from the active database and cannot be undone.`;
+    businessOverview = `This action removes the <strong>${noun}</strong> record from the active ${entity} database and cannot be undone.`;
   } else {
     baseDesc = `Executes the ${cleanName} operation.`;
-    businessOverview = `Use this endpoint to interact with the system via standard HTTP methods.`;
+    businessOverview = `Use this endpoint to programmatically interact with <strong>${noun}</strong> data via standard HTTP methods.`;
   }
 
   if (verbose) {
-    const entity = matchEndpointToEntity(name)?.entity || 'system';
-    const entityDesc = ENTITY_DESCRIPTIONS[entity] || '';
-    
-    return `<strong>${baseDesc}</strong><br><br>${businessOverview} Integrating this endpoint allows your application to programmatically manage <strong>${entity}</strong> workflows.${entityDesc ? `<br><br><span style="border-left: 3px solid var(--xero-blue); padding-left: 12px; display: block; color: var(--text-secondary); background: var(--hover-bg); padding: 10px 15px; border-radius: 4px;"><em><strong>Business Context:</strong> ${entityDesc}</em></span>` : ''}`;
+    return `<strong>${baseDesc}</strong><br><br>${businessOverview}`;
   }
   
   return baseDesc;
