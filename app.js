@@ -968,9 +968,9 @@ function createEndpointBlock(reqItem) {
             formattedJson = JSON.stringify(parsed, null, 2);
             Object.assign(fields, parsed);
           } catch { formattedJson = fd.value; }
-          return `<tr><td>${fd.key}</td><td><span class="type-pill">json</span></td><td><span class="muted">(JSON body — see example below)</span></td><td>${desc}</td></tr>`;
+          return `<tr><td>${fd.key}</td><td><span class="type-pill">json</span></td><td><span class="muted">(JSON body — see example below)</span></td><td>${generateFieldDesc(fd.key, reqItem.name)}</td></tr>`;
         }
-        return `<tr><td>${fd.key}</td><td><span class="type-pill">${fd.type}</span></td><td>${fd.value || '—'}</td><td>${desc}</td></tr>`;
+        return `<tr><td>${fd.key}</td><td><span class="type-pill">${fd.type}</span></td><td>${fd.value || '—'}</td><td>${generateFieldDesc(fd.key, reqItem.name)}</td></tr>`;
       }).join('');
       if (rows) {
         paramsHTML = `<div class="section-label">Request Body (multipart/form-data)</div>
@@ -1055,7 +1055,7 @@ function buildParamsTable(obj, parentId = '', rootName = "Request Body Parameter
   const rows = Object.entries(obj).map(([k, v]) => {
     const type = Array.isArray(v) ? 'array' : typeof v;
     let display = '';
-    let desc = generateFieldDesc(k);
+    let desc = generateFieldDesc(k, endpointName);
     
     if (type === 'array') {
       if (v.length > 0 && typeof v[0] === 'object' && v[0] !== null) {
@@ -1099,9 +1099,14 @@ function buildParamsTable(obj, parentId = '', rootName = "Request Body Parameter
   return html;
 }
 
-function generateFieldDesc(key) {
+function generateFieldDesc(key, endpointName = '') {
   const kl = key.toLowerCase();
   
+  // High-priority overrides for PUT method fields from Excel
+  if (endpointName && PUT_FIELD_OVERRIDES[endpointName] && PUT_FIELD_OVERRIDES[endpointName][key]) {
+     return PUT_FIELD_OVERRIDES[endpointName][key];
+  }
+
   if (kl === 'vouchername') return "The type of accounting voucher being created (e.g., <code>SalesInvoice</code>, <code>PurchaseOrder</code>). Determines how the transaction is categorized in the system.";
   if (kl === 'narration') return "A free-text memo or note attached to the voucher, often used for discounts, adjustments, or internal remarks (e.g., <code>4%DISCOUNT</code>).";
   if (kl === 'voucherdate') return "The date and time the voucher was issued, in <code>YYYY-MM-DD HH:MM:SS.mmm</code> format. Used for ledger posting and reporting purposes.";
@@ -1165,7 +1170,6 @@ function copyCurl(btn, method, url) {
         const minified = JSON.stringify(JSON.parse(rawJson));
         curl += ` \\\n--data-raw '${minified}'`;
       } catch (e) {
-        // Fallback if parsing fails
         curl += ` \\\n--data-raw '${codeEl.innerText.trim()}'`;
       }
     }
@@ -1174,7 +1178,7 @@ function copyCurl(btn, method, url) {
   navigator.clipboard.writeText(curl).then(() => {
     const original = btn.innerHTML;
     btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
-    btn.style.background = "#10b981"; // success green
+    btn.style.background = "#10b981";
     btn.style.color = "white";
     btn.style.borderColor = "#10b981";
     setTimeout(() => {
@@ -1184,8 +1188,131 @@ function copyCurl(btn, method, url) {
   });
 }
 
+const PUT_FIELD_OVERRIDES = {
+  "AbbSalesInvoice": {
+    "IsAbbInvoice": "Indicates whether the invoice is an abbreviated/simplified invoice format (used for quick billing or compliance scenarios).",
+    "VoucherDate": "The date of the invoice. Determines accounting period and affects financial reporting.",
+    "ManualVoucherNO": "User-defined invoice number. If empty, system may auto-generate. Should be unique.",
+    "VoucherId": "Unique identifier of the invoice. If provided → update; if not → create new.",
+    "RefNo": "Reference number (e.g., coupon no, external system reference, order ID). Used for tracking.",
+    "Narration": "Additional description or remarks for the invoice. Appears in reports and print formats.",
+    "PartyLedgerId": "Customer ledger ID. Represents the debtor account in accounting (Accounts Receivable).",
+    "TotalAmount": "Total invoice amount. Must match sum of all item amounts (after discount).",
+    "ProductId": "Unique identifier of the product/item being sold. Must exist in product master.",
+    "LedgerId": "Sales ledger/account where revenue will be posted (e.g., Sales Account).",
+    "UnitId": "Unit of measurement (e.g., PCS, KG). Must match product configuration.",
+    "ActualQty": "Actual quantity of goods. Used for stock tracking.",
+    "BilledQty": "Quantity billed to customer. May differ from actual (e.g., partial billing).",
+    "FreeQty": "Free quantity given (e.g., promotional items). Does not affect billing amount.",
+    "Rate": "Price per unit of the product.",
+    "DiscountPer": "Discount percentage applied on item level.",
+    "DiscountAmt": "Discount amount applied on item level.",
+    "Amount": "Final line amount after applying quantity, rate, and discount.",
+    "Buyes": "Buyer/customer name (printed on invoice).",
+    "Address": "Customer address for billing and legal compliance.",
+    "SalesTaxNo": "Customer VAT/PAN number. Required for tax compliance.",
+    "PhoneNo": "Customer contact number.",
+    "Goods": "Additional logistics info (e.g., vehicle number, delivery details)."
+  },
+  "SaveDebtorRoute": {
+    "Name": "The official name of the debtor route. Typically represents a geographic area, locality, or route (e.g., Baneshwor, Lalitpur). Used for identifying and grouping customers.",
+    "Alias": "An alternate or short name for the route. Useful for internal reference, quick search, or display in UI where shorter names are preferred.",
+    "Code": "A unique code assigned to the route. Used as an identifier for system integration, reporting, and quick lookup. Should be unique across all routes."
+  },
+  "SaveDebtorType": {
+    "Name": "The official name of the debtor type (e.g., Wholesaler, Retailer). Used for classification and reporting.",
+    "Alias": "An alternate or short name for the debtor type. Useful for internal reference, grouping, or UI display.",
+    "Code": "A unique identifier for the debtor type. Used in system integration, reporting, and quick lookup.",
+    "DType": "Defines the category of debtor based on business classification. Allowed values:\n1 = Dealer / Distributor (used for wholesale or distribution partners)\n2 = Outlet (used for retail shops or end-point sellers)\n3 = Branch (used for internal company branches or offices)\n4 = Other (used for miscellaneous or uncategorized entities)\n5 = Members (used for member-based customers, loyalty users, or special groups)."
+  },
+  "SaveAgent": {
+    "Name": "Full name of the agent/salesperson. Used for identification, reporting, and operational tracking.",
+    "Address": "Residential or operational address of the agent. Useful for regional assignment and communication.",
+    "Mobile": "Contact number of the agent. Used for communication, login verification, and notifications.",
+    "Code": "Unique identifier for the agent. Used in system mapping, reporting, and integration.",
+    "Level": "Defines the organizational hierarchy or role of the agent within the sales structure. Allowed values: 1 = Dealer Incharge (handles dealer-level operations) 2 = Sales Officer (executes field sales activities) 3 = ASM (Area Sales Manager) (manages a region/team) 4 = RSM (Regional Sales Manager) (oversees multiple areas) 5 = NSM (National Sales Manager) (manages national-level sales) 6 = Sales Director (strategic sales leadership) 7 = Managing Director (top-level executive authority).",
+    "Designation": "Official job title of the agent (e.g., Sales Officer, ASM). Used for display and organizational clarity."
+  },
+  "SaveLedger": {
+    "Name": "Official name of the ledger/account (e.g., customer, supplier, bank). Used in all financial transactions and reports.",
+    "Alias": "Alternate or short name for the ledger. Useful for quick search and internal reference.",
+    "Code": "Unique identifier for the ledger. Used for system mapping, integrations, and reporting.",
+    "LedgerGroupId": "(Group) ID defining the classification of the ledger (e.g., Assets, Liabilities, Debtors). LedgerGroupId = 12 (Sundry Debtors), LedgerGroupId = 26 (Sundry Creditors)",
+    "Address": "Full address of the ledger entity. Required for billing, compliance, and reporting.",
+    "IsImportExportLedger": "Indicates whether the ledger is used for import/export transactions. Affects compliance and reporting rules.",
+    "DrCr": "Defines the default balance nature of the ledger. 1 = Debit (Dr) 2 = Credit (Cr)",
+    "CurrencyName": "Currency associated with the ledger (e.g., INR, NPR, USD). Used for multi-currency transactions.",
+    "Status": "Indicates whether the ledger is active. true = Active false = Inactive",
+    "StatutoryDetail.PanVatNo": "PAN/VAT/Tax identification number of the ledger. Required for statutory compliance and tax reporting.",
+    "File1": "Supporting document (e.g., agreement, KYC, contract). Stored against the ledger for verification and compliance."
+  },
+  "SaveJournal": {
+    "VoucherDate": "The date of the journal entry. Determines the accounting period and affects financial reporting.",
+    "ManualVoucherNO": "User-defined journal number. If not provided, system may auto-generate. Should be unique.",
+    "VoucherId": "Unique identifier of the journal entry. If provided → update; if not → create new entry.",
+    "RefNo": "Reference number (e.g., invoice number, external document). Used for traceability.",
+    "Narration": "Description of the journal entry explaining the purpose of the transaction. Appears in reports.",
+    "DRCR": "Indicates whether the line is Debit or Credit. 1 = Debit (Dr) 2 = Credit (Cr)",
+    "LedgerId": "Ledger/account ID where the transaction is posted. Must exist in Chart of Accounts.",
+    "DrAmount": "Debit amount for the ledger line. Should be greater than 0 only if DRCR = 1.",
+    "CrAmount": "Credit amount for the ledger line. Should be greater than 0 only if DRCR = 2.",
+    "File1": "Supporting document (e.g., bill, receipt, expense proof). Stored for audit and compliance purposes."
+  },
+  "SaveReceipt": {
+    "VoucherName": "Type of voucher. Here it is “Receipt”, used to identify transaction type.",
+    "CostClassName": "Cost classification (e.g., Primary). Used for cost allocation and reporting.",
+    "AutoVoucherNo": "System-generated voucher number for internal tracking.",
+    "CurRate": "Currency exchange rate. Default = 1 for base currency.",
+    "Narration": "Line-level narration for the specific ledger entry.",
+    "VoucherDate": "Transaction date affecting accounting and reporting period.",
+    "AutoManualNo": "Manual or display voucher number (user-facing).",
+    "EntryDate": "Date when the entry is recorded in the system.",
+    "DrCr": "Debit/Credit indicator for cost allocation.",
+    "LedgerName": "Name of the ledger (e.g., Cash, Bank, Customer).",
+    "LFNO": "Ledger Folio Number (optional reference for accounting tracking).",
+    "DrAmount": "Debit amount. Used when DrCr = 1.",
+    "CrAmount": "Credit amount. Used when DrCr = 2.",
+    "CostCenterName": "Name of the cost center (e.g., department, expense head).",
+    "CrAmount / DrAmount": "Allocated amount for the cost center.",
+    "ItemDetailsCOll": "Used when receipt involves item-level adjustments (rare in receipt).",
+    "TDSVatDetailColl": "Tax-related details (TDS/VAT). Used for statutory compliance.",
+    "CheckDetails": "Cheque/payment instrument details (e.g., cheque no, bank name).",
+    "BillRefColl": "Used to adjust receipt against outstanding invoices (important for AR).",
+    "File1": "Supporting document (receipt scan, payment proof, etc.). Used for audit and compliance."
+  },
+  "SaveProductCategories": {
+    "Name": "Name of the product category (e.g., Snacks, Beverages). Used to classify products for reporting and organization.",
+    "Alias": "Alternate or short name for the category. Useful for internal reference or UI display.",
+    "Code": "Unique identifier for the product category. Used for system mapping, integrations, and quick lookup.",
+    "ParentCategoryId": "Reference to the parent product category. Enables hierarchical structure (main category → subcategory)."
+  },
+  "SaveProductCompany": {
+    "Name": "Official name of the product company or brand manufacturer. Used for identifying the company in product records and reports.",
+    "Code": "Unique identifier assigned to the product company. Used for system mapping, integrations, and quick lookup.",
+    "Address": "Physical or registered address of the company. Used for communication and documentation purposes.",
+    "ContactPerson": "Name of the primary contact person representing the company.",
+    "PhoneNo": "Contact number of the company or contact person. Used for communication and coordination.",
+    "Email": "Email address of the company or contact person. Used for official communication.",
+    "Website": "Official website URL of the company. Used for reference and external access to company information."
+  },
+  "SaveProductGroup": {
+    "Name": "Name of the product group used to classify products at a higher level (e.g., FMCG, Electronics).",
+    "Alias": "Alternate or short name for the product group, used for internal reference or display purposes.",
+    "Code": "Unique identifier for the product group, used for system mapping and quick lookup.",
+    "ParentGroupId": "Reference to the parent product group, enabling hierarchical grouping (main group → sub-group). Represents nested product group structure."
+  },
+  "SaveUnit": {
+    "Name": "Full name of the unit (e.g., \"Cartoon\", \"Kilogram\", \"Liter\", \"Piece\") — shown in invoices, stock reports, and item masters. Should be unique.",
+    "Alias": "Short name or symbol (e.g., \"Ctn\", \"Kg\", \"Ltr\", \"Nos\") — used for quick entry and display next to quantities. Optional.",
+    "NoOfDecimalPlaces": "Number of decimal places allowed for quantity (e.g., 0 for pieces, 2–3 for kg/liters). Controls input precision.",
+    "RateNoOfDecimalPlaces": "Number of decimal places allowed for rate/price per unit (usually 2–4). Helps with precise pricing of weight/volume items.",
+    "AmountNoOfDecimalPlaces": "Number of decimal places for total amount (Qty × Rate). Usually 2 (matches currency like INR).",
+    "TypeOfUnit": "Type/category of unit: • 1 = Quantity (default) – pieces, boxes, dozens • 2 = Weight – kg, gram, ton • 3 = Volume – liter, ml, cubic meter Affects default precision suggestions and reporting."
+  }
+};
+
 function generateShortDesc(name, method, verbose = false) {
-const exactOverrides = {
+  const exactOverrides = {
     'GetLedgerGroupList': 'Retrieves the list of ledger groups based on provided filters, used to classify accounts within the Chart of Accounts.',
     'LedgerGroupSummary': 'Retrieves summarized ledger group data based on provided filters for financial analysis and reporting.',
     'AutoCompleteLedgerList': 'Retrieves a filtered list of ledger accounts for auto-complete selection based on search criteria.',
@@ -1265,7 +1392,7 @@ const exactOverrides = {
     'GetSalesmanProfile': 'Retrieves salesman profile details based on provided filters.',
     'Agent GetProfile': 'Retrieves agent profile details based on provided filters.',
     'Agent GetPartyList': 'Retrieves a list of parties associated with an agent based on provided filters.',
-    'GetSalesmanParentUserId': 'Retrieves parent user mapping details for a salesman based on provided filters.',
+    'GetSalesmanParentUserId': 'Retrieves parent user mapping details for a salesperson based on provided filters.',
     'Exp_GetExpensesType': 'Retrieves expense types used for classification of expense entries.',
     'Exp_GetExpensesCategory': 'Retrieves expense categories based on provided filters.',
     'Exp_GetClaim': 'Retrieves expense claim details based on provided filters.',
