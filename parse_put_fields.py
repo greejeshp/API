@@ -19,6 +19,7 @@ for index, row in df.iterrows():
         continue
     
     field_name = str(row[2]).strip()
+    field_type = str(row[3]).strip()
     description = str(row[4]).strip()
     
     if field_name == 'nan' or description == 'nan' or field_name == 'Field':
@@ -27,7 +28,10 @@ for index, row in df.iterrows():
     if api_name not in mapping:
         mapping[api_name] = {}
     
-    mapping[api_name][field_name] = description
+    mapping[api_name][field_name] = {
+        "desc": description,
+        "type": field_type if field_type != 'nan' else 'String'
+    }
 
 with open('put_fields.json', 'w', encoding='utf-8') as f:
     json.dump(mapping, f, indent=2, ensure_ascii=False)

@@ -30,21 +30,21 @@ def update_app_js():
     else:
         print("Could not find PUT_FIELD_OVERRIDES block in app.js")
 
-    # 2. Update exactOverrides inside generateShortDesc
+    # 2. Update API_DESCRIPTION_OVERRIDES
     match_eo = re.search(r'const exactOverrides = (\{.*?\});', excel_overrides_content, re.DOTALL)
     if match_eo:
         new_exact_overrides_content = match_eo.group(1)
-        replacement = f"  const exactOverrides = {new_exact_overrides_content};"
+        # We'll use a slightly different formatting for the global constant replacement
+        replacement = f"const API_DESCRIPTION_OVERRIDES = {new_exact_overrides_content};"
         
-        # In app.js, there's a specific block we want to replace.
-        # It's at line ~1315, starts with a lot of indentation.
-        pattern2 = r'  const exactOverrides = \{.*?\};'
+        # In app.js, target the global constant. It might have different indentation now.
+        pattern2 = r'const API_DESCRIPTION_OVERRIDES = \{.*?\};'
         match2 = re.search(pattern2, app_js, re.DOTALL)
         if match2:
             start, end = match2.span()
             app_js = app_js[:start] + replacement + app_js[end:]
         else:
-            print("Could not find exactOverrides block in app.js")
+            print("Could not find API_DESCRIPTION_OVERRIDES block in app.js")
 
     # Write back to app.js
     with open(app_js_path, 'w', encoding='utf-8') as f:

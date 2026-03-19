@@ -49,6 +49,17 @@ const ENTITY_DESCRIPTIONS = {
   "Dynamic Data / AI": "Advanced dynamic data handling and AI-driven interfaces. Use these for non-static data structures and intelligent data processing within the ERP ecosystem.",
 };
 
+const API_DESCRIPTION_OVERRIDES = {
+    'SaveDebtorRoute': 'This API is used to create or update debtor route records, which help in organizing customers based on geographic or operational routes (commonly used in sales, delivery, and collection planning).',
+    'SaveDebtorType': 'This API is used to create or update debtor type classifications, which define how customers are categorized within the system (e.g., Distributor, Outlet, Branch).',
+    'SaveAgent': 'This API is used to create or update agent (salesperson) records, which represent employees or field staff involved in sales, distribution, and operational workflows.',
+    'SaveLedger': 'This API is used to create or update ledger (account) records within the Chart of Accounts or sub-ledgers (e.g., Customer, Vendor, Bank).',
+    'SaveJournal': 'This API is used to create or update journal entries, which record financial transactions or adjustments (e.g., expenses, accruals, corrections).',
+    'SaveReceipt': 'This API is used to record receipt transactions, i.e., money received from customers or other sources (cash/bank).',
+    'SaveProductCategories': 'This API is used to create or update product category records, supporting a hierarchical (parent-child) structure for organizing products.',
+    'SaveUnit': 'Purpose: Create or update Units of Measurement (UOM) used for stock items, invoices, and inventory tracking.',
+  };
+
 // ─── Entity → Folder + Keyword Map ───────────────────────────────────────────
 // Maps each entity to the folder it lives in + keywords to match endpoint names
 const ENTITY_MAP = [
@@ -269,7 +280,7 @@ function toggleSidebar(expand) {
 // ─── Build Entity Buckets from All Items ──────────────────────────────────────
 // ─── Company-specific folders to exclude from the public documentation ─────
 const BLOCKED_FOLDERS = ['Dugar'];
-const BLOCKED_ENDPOINTS = ['GetPartyAeging Copy'];
+const BLOCKED_ENDPOINTS = ['GetPartyAgeing Copy', 'SaveLocalReceipt', 'GetNewVatRegister'];
 
 function buildEntityBuckets(allFolders) {
   const entityBuckets = {};
@@ -841,6 +852,56 @@ function renderEntitySection(entityName, bucket, container) {
 // ─── Base URL ─────────────────────────────────────────────────────────────────
 const BASE_URL = 'https://mktdemo.dynamicerp.online';
 
+/**
+ * Normalizes a string by removing all non-alphanumeric characters and converting to lowercase.
+ * This ensures that "Save Ledger" matches "SaveLedger" or "save_ledger".
+ */
+function normalizeName(name) {
+  return (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+/**
+ * Finds an API-level description override using robust name matching.
+ */
+function getApiOverride(name) {
+  const normName = normalizeName(name);
+  if (!normName) return null;
+  for (const [key, val] of Object.entries(API_DESCRIPTION_OVERRIDES)) {
+    if (normalizeName(key) === normName) return val;
+  }
+  return null;
+}
+
+/**
+ * Finds a field-level description override using robust name matching for both endpoint and field.
+ */
+function getFieldOverride(endpointName, fieldName) {
+  const normEndpoint = normalizeName(endpointName);
+  const normField = normalizeName(fieldName);
+  if (!normEndpoint || !normField) return null;
+  
+  for (const [eKey, fields] of Object.entries(PUT_FIELD_OVERRIDES)) {
+    if (normalizeName(eKey) === normEndpoint) {
+      for (const [fKey, desc] of Object.entries(fields)) {
+        if (normalizeName(fKey) === normField) return desc;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Finds all field-level overrides for a specific endpoint.
+ */
+function getFieldOverridesForEndpoint(endpointName) {
+  const normEndpoint = normalizeName(endpointName);
+  if (!normEndpoint) return null;
+  for (const [eKey, fields] of Object.entries(PUT_FIELD_OVERRIDES)) {
+    if (normalizeName(eKey) === normEndpoint) return fields;
+  }
+  return null;
+}
+
 // ─── Auto-Generated / Server-Managed Fields to Strip ─────────────────────────
 // These fields are set by the server and MUST NOT be sent in request bodies.
 const AUTO_FIELDS = new Set([
@@ -916,6 +977,20 @@ function createEndpointBlock(reqItem) {
     </span>`;
   }
 
+  // Build descriptions
+  let finalDescHTML = '';
+  const overrideDesc = getApiOverride(reqItem.name);
+  if (overrideDesc) {
+    // If we have an exact override from Excel, prioritize it
+    finalDescHTML = `<p><strong>${overrideDesc}</strong></p>`;
+  } else if (r.description) {
+    // Otherwise use Postman description
+    finalDescHTML = marked.parse(r.description);
+  } else {
+    // Fallback to generated short description
+    finalDescHTML = `<p>${generateShortDesc(reqItem.name, method, true)}</p>`;
+  }
+
   // Build body
   let paramsHTML = '';
   let formattedJson = null;
@@ -947,7 +1022,13 @@ function createEndpointBlock(reqItem) {
       if (parsedObj) {
         parsedObj = stripAutoFields(parsedObj);
         formattedJson = JSON.stringify(parsedObj, null, 2);
-        paramsHTML = buildParamsTable(parsedObj, id, "Request Body Parameters", 0, reqItem.name);
+        
+        // specific user request: hide parameters for Get Ledger Group List
+        if (normalizeName(reqItem.name) === 'getledgergrouplist') {
+            paramsHTML = ''; 
+        } else {
+            paramsHTML = buildParamsTable(parsedObj, id, "Request Body Parameters", 0, reqItem.name);
+        }
       } else {
         formattedJson = raw;
       }
@@ -968,11 +1049,23 @@ function createEndpointBlock(reqItem) {
             formattedJson = JSON.stringify(parsed, null, 2);
             Object.assign(fields, parsed);
           } catch { formattedJson = fd.value; }
+          
+          // specific user request: hide parameters for Get Ledger Group List
+          if (normalizeName(reqItem.name) === 'getledgergrouplist') {
+              return '';
+          }
+          
           return `<tr><td>${fd.key}</td><td><span class="type-pill">json</span></td><td><span class="muted">(JSON body — see example below)</span></td><td>${generateFieldDesc(fd.key, reqItem.name)}</td></tr>`;
         }
+        
+        // specific user request: hide parameters for Get Ledger Group List
+        if (normalizeName(reqItem.name) === 'getledgergrouplist') {
+            return '';
+        }
+        
         return `<tr><td>${fd.key}</td><td><span class="type-pill">${fd.type}</span></td><td>${fd.value || '—'}</td><td>${generateFieldDesc(fd.key, reqItem.name)}</td></tr>`;
       }).join('');
-      if (rows) {
+      if (rows && normalizeName(reqItem.name) !== 'getledgergrouplist') {
         paramsHTML = `<div class="section-label">Request Body (multipart/form-data)</div>
           <table class="params-table"><thead><tr><th>Field</th><th>Type</th><th>Example Value</th><th>Description</th></tr></thead><tbody>${rows}</tbody></table>`;
           
@@ -1029,7 +1122,7 @@ function createEndpointBlock(reqItem) {
           <span class="url-path">${urlRaw.replace(/\{\{URL\}\}/g, BASE_URL)}</span>
         </div>
         <div class="markdown-body card-desc">
-          ${r.description ? marked.parse(r.description) : `<p>${generateShortDesc(reqItem.name, method, true)}</p>`}
+          ${finalDescHTML}
         </div>
         ${queryHTML}
         ${codeHTML}
@@ -1052,31 +1145,54 @@ function buildParamsTable(obj, parentId = '', rootName = "Request Body Parameter
   let html = '';
   const subTables = [];
   
-  const rows = Object.entries(obj).map(([k, v]) => {
-    const type = Array.isArray(v) ? 'array' : typeof v;
+  const allKeys = new Set(Object.keys(obj));
+  const overrides = getFieldOverridesForEndpoint(endpointName);
+  
+  // If we are at the root level, ensure all fields from the Excel override are present
+  if (overrides && level === 0) {
+    for (const k in overrides) {
+      allKeys.add(k);
+    }
+  }
+  
+  const rows = Array.from(allKeys).map(k => {
+    let v = obj[k];
+    let type = Array.isArray(v) ? 'array' : typeof v;
     let display = '';
+    
+    // Check if we have an override that provides type info
+    const fieldOverride = getFieldOverride(endpointName, k);
+    if (v === undefined && fieldOverride && typeof fieldOverride === 'object' && fieldOverride.type) {
+        type = fieldOverride.type.toLowerCase();
+    }
+    
     let desc = generateFieldDesc(k, endpointName);
     
-    if (type === 'array') {
-      if (v.length > 0 && typeof v[0] === 'object' && v[0] !== null) {
+    if (v !== undefined) {
+      if (type === 'array') {
+        if (v.length > 0 && typeof v[0] === 'object' && v[0] !== null) {
+          const subId = `${parentId}-${k}`;
+          display = `<a href="#${subId}" class="sum-ep-link" style="text-decoration:underline;color:var(--xero-blue)">See ${k}</a>`;
+          desc = `Collection of ${k} elements.`;
+          subTables.push({ key: k, data: v[0], type: 'array', subId });
+        } else {
+          display = `<span class="muted">[array]</span>`;
+        }
+      } else if (type === 'object' && v !== null) {
         const subId = `${parentId}-${k}`;
         display = `<a href="#${subId}" class="sum-ep-link" style="text-decoration:underline;color:var(--xero-blue)">See ${k}</a>`;
-        desc = `Collection of ${k} elements.`;
-        subTables.push({ key: k, data: v[0], type: 'array', subId });
+        desc = `Detailed ${k} object.`;
+        subTables.push({ key: k, data: v, type: 'object', subId });
       } else {
-        display = `<span class="muted">[array]</span>`;
+        display = String(v);
+        // specific user request: blank out example values for Get Ledger Group List
+        if (endpointName.replace(/\s+/g, '').toLowerCase() === 'getledgergrouplist') {
+          display = '';
+        }
       }
-    } else if (type === 'object' && v !== null) {
-      const subId = `${parentId}-${k}`;
-      display = `<a href="#${subId}" class="sum-ep-link" style="text-decoration:underline;color:var(--xero-blue)">See ${k}</a>`;
-      desc = `Detailed ${k} object.`;
-      subTables.push({ key: k, data: v, type: 'object', subId });
     } else {
-      display = String(v);
-      // specific user request: blank out example values for Get Ledger Group List
-      if (endpointName.replace(/\s+/g, '').toLowerCase() === 'getledgergrouplist') {
-        display = '';
-      }
+       // Field is missing in JSON but present in Excel
+       display = `<span class="muted" title="Optional or not provided in example">(optional)</span>`;
     }
     
     return `<tr><td>${k}</td><td><span class="type-pill">${type}</span></td><td>${display}</td><td>${desc}</td></tr>`;
@@ -1103,8 +1219,9 @@ function generateFieldDesc(key, endpointName = '') {
   const kl = key.toLowerCase();
   
   // High-priority overrides for PUT method fields from Excel
-  if (endpointName && PUT_FIELD_OVERRIDES[endpointName] && PUT_FIELD_OVERRIDES[endpointName][key]) {
-     return PUT_FIELD_OVERRIDES[endpointName][key];
+  const fieldOverride = getFieldOverride(endpointName, key);
+  if (fieldOverride) {
+     return typeof fieldOverride === 'object' ? fieldOverride.desc : fieldOverride;
   }
 
   if (kl === 'vouchername') return "The type of accounting voucher being created (e.g., <code>SalesInvoice</code>, <code>PurchaseOrder</code>). Determines how the transaction is categorized in the system.";
@@ -1190,342 +1307,1172 @@ function copyCurl(btn, method, url) {
 
 const PUT_FIELD_OVERRIDES = {
   "AbbSalesInvoice": {
-    "IsAbbInvoice": "Indicates whether the invoice is an abbreviated/simplified invoice format (used for quick billing or compliance scenarios).",
-    "VoucherDate": "The date of the invoice. Determines accounting period and affects financial reporting.",
-    "ManualVoucherNO": "User-defined invoice number. If empty, system may auto-generate. Should be unique.",
-    "VoucherId": "Unique identifier of the invoice. If provided \u2192 update; if not \u2192 create new.",
-    "RefNo": "Reference number (e.g., coupon no, external system reference, order ID). Used for tracking.",
-    "Narration": "Additional description or remarks for the invoice. Appears in reports and print formats.",
-    "PartyLedgerId": "Customer ledger ID. Represents the debtor account in accounting (Accounts Receivable).",
-    "TotalAmount": "Total invoice amount. Must match sum of all item amounts (after discount).",
-    "ProductId": "Unique identifier of the product/item being sold. Must exist in product master.",
-    "LedgerId": "Sales ledger/account where revenue will be posted (e.g., Sales Account).",
-    "UnitId": "Unit of measurement (e.g., PCS, KG). Must match product configuration.",
-    "ActualQty": "Actual quantity of goods. Used for stock tracking.",
-    "BilledQty": "Quantity billed to customer. May differ from actual (e.g., partial billing).",
-    "FreeQty": "Free quantity given (e.g., promotional items). Does not affect billing amount.",
-    "Rate": "Price per unit of the product.",
-    "DiscountPer": "Discount percentage applied on item level.",
-    "DiscountAmt": "Discount amount applied on item level.",
-    "Amount": "Final line amount after applying quantity, rate, and discount.",
-    "Buyes": "Buyer/customer name (printed on invoice).",
-    "Address": "Customer address for billing and legal compliance.",
-    "SalesTaxNo": "Customer VAT/PAN number. Required for tax compliance.",
-    "PhoneNo": "Customer contact number.",
-    "Goods": "Additional logistics info (e.g., vehicle number, delivery details)."
+    "IsAbbInvoice": {
+      "desc": "Indicates whether the invoice is an abbreviated/simplified invoice format (used for quick billing or compliance scenarios).",
+      "type": "Boolean"
+    },
+    "VoucherDate": {
+      "desc": "The date of the invoice. Determines accounting period and affects financial reporting.",
+      "type": "Date"
+    },
+    "ManualVoucherNO": {
+      "desc": "User-defined invoice number. If empty, system may auto-generate. Should be unique.",
+      "type": "String"
+    },
+    "VoucherId": {
+      "desc": "Unique identifier of the invoice. If provided \u2192 update; if not \u2192 create new.",
+      "type": "Integer"
+    },
+    "RefNo": {
+      "desc": "Reference number (e.g., coupon no, external system reference, order ID). Used for tracking.",
+      "type": "String"
+    },
+    "Narration": {
+      "desc": "Additional description or remarks for the invoice. Appears in reports and print formats.",
+      "type": "String"
+    },
+    "PartyLedgerId": {
+      "desc": "Customer ledger ID. Represents the debtor account in accounting (Accounts Receivable).",
+      "type": "Integer"
+    },
+    "TotalAmount": {
+      "desc": "Total invoice amount. Must match sum of all item amounts (after discount).",
+      "type": "Decimal"
+    },
+    "ProductId": {
+      "desc": "Unique identifier of the product/item being sold. Must exist in product master.",
+      "type": "Integer"
+    },
+    "LedgerId": {
+      "desc": "Sales ledger/account where revenue will be posted (e.g., Sales Account).",
+      "type": "Integer"
+    },
+    "UnitId": {
+      "desc": "Unit of measurement (e.g., PCS, KG). Must match product configuration.",
+      "type": "Integer"
+    },
+    "ActualQty": {
+      "desc": "Actual quantity of goods. Used for stock tracking.",
+      "type": "Decimal"
+    },
+    "BilledQty": {
+      "desc": "Quantity billed to customer. May differ from actual (e.g., partial billing).",
+      "type": "Decimal"
+    },
+    "FreeQty": {
+      "desc": "Free quantity given (e.g., promotional items). Does not affect billing amount.",
+      "type": "Decimal"
+    },
+    "Rate": {
+      "desc": "Price per unit of the product.",
+      "type": "Decimal"
+    },
+    "DiscountPer": {
+      "desc": "Discount percentage applied on item level.",
+      "type": "Decimal"
+    },
+    "DiscountAmt": {
+      "desc": "Discount amount applied on item level.",
+      "type": "Decimal"
+    },
+    "Amount": {
+      "desc": "Final line amount after applying quantity, rate, and discount.",
+      "type": "Decimal"
+    },
+    "Buyes": {
+      "desc": "Buyer/customer name (printed on invoice).",
+      "type": "String"
+    },
+    "Address": {
+      "desc": "Customer address for billing and legal compliance.",
+      "type": "String"
+    },
+    "SalesTaxNo": {
+      "desc": "Customer VAT/PAN number. Required for tax compliance.",
+      "type": "String"
+    },
+    "PhoneNo": {
+      "desc": "Customer contact number.",
+      "type": "String"
+    },
+    "Goods": {
+      "desc": "Additional logistics info (e.g., vehicle number, delivery details).",
+      "type": "String"
+    }
   },
   "SaveDebtorRoute": {
-    "Name": "The official name of the debtor route. Typically represents a geographic area, locality, or route (e.g., Baneshwor, Lalitpur). Used for identifying and grouping customers.",
-    "Alias": "An alternate or short name for the route. Useful for internal reference, quick search, or display in UI where shorter names are preferred.",
-    "Code": "A unique code assigned to the route. Used as an identifier for system integration, reporting, and quick lookup. Should be unique across all routes."
+    "Name": {
+      "desc": "The official name of the debtor route. Typically represents a geographic area, locality, or route (e.g., Baneshwor, Lalitpur). Used for identifying and grouping customers.",
+      "type": "String"
+    },
+    "Alias": {
+      "desc": "An alternate or short name for the route. Useful for internal reference, quick search, or display in UI where shorter names are preferred.",
+      "type": "String"
+    },
+    "Code": {
+      "desc": "A unique code assigned to the route. Used as an identifier for system integration, reporting, and quick lookup. Should be unique across all routes.",
+      "type": "String"
+    }
   },
   "SaveDebtorType": {
-    "Name": "The official name of the debtor type (e.g., Wholesaler, Retailer). Used for classification and reporting.",
-    "Alias": "An alternate or short name for the debtor type. Useful for internal reference, grouping, or UI display.",
-    "Code": "A unique identifier for the debtor type. Used in system integration, reporting, and quick lookup.",
-    "DType": "Defines the category of debtor based on business classification. Allowed values:\n1 = Dealer / Distributor (used for wholesale or distribution partners)\n2 = Outlet (used for retail shops or end-point sellers)\n3 = Branch (used for internal company branches or offices)\n4 = Other (used for miscellaneous or uncategorized entities)\n5 = Members (used for member-based customers, loyalty users, or special groups)."
+    "Name": {
+      "desc": "The official name of the debtor type (e.g., Wholesaler, Retailer). Used for classification and reporting.",
+      "type": "String"
+    },
+    "Alias": {
+      "desc": "An alternate or short name for the debtor type. Useful for internal reference, grouping, or UI display.",
+      "type": "String"
+    },
+    "Code": {
+      "desc": "A unique identifier for the debtor type. Used in system integration, reporting, and quick lookup.",
+      "type": "String"
+    },
+    "DType": {
+      "desc": "Defines the category of debtor based on business classification. Allowed values:\n1 = Dealer / Distributor (used for wholesale or distribution partners)\n2 = Outlet (used for retail shops or end-point sellers)\n3 = Branch (used for internal company branches or offices)\n4 = Other (used for miscellaneous or uncategorized entities)\n5 = Members (used for member-based customers, loyalty users, or special groups).",
+      "type": "Integer"
+    }
   },
   "SaveAgent": {
-    "Name": "Full name of the agent/salesperson. Used for identification, reporting, and operational tracking.",
-    "Address": "Residential or operational address of the agent. Useful for regional assignment and communication.",
-    "Mobile": "Contact number of the agent. Used for communication, login verification, and notifications.",
-    "Code": "Unique identifier for the agent. Used in system mapping, reporting, and integration.",
-    "Level": "Defines the organizational hierarchy or role of the agent within the sales structure. Allowed values: 1 = Dealer Incharge (handles dealer-level operations) 2 = Sales Officer (executes field sales activities) 3 = ASM (Area Sales Manager) (manages a region/team) 4 = RSM (Regional Sales Manager) (oversees multiple areas) 5 = NSM (National Sales Manager) (manages national-level sales) 6 = Sales Director (strategic sales leadership) 7 = Managing Director (top-level executive authority).",
-    "Designation": "Official job title of the agent (e.g., Sales Officer, ASM). Used for display and organizational clarity."
+    "Name": {
+      "desc": "Full name of the agent/salesperson. Used for identification, reporting, and operational tracking.",
+      "type": "String"
+    },
+    "Address": {
+      "desc": "Residential or operational address of the agent. Useful for regional assignment and communication.",
+      "type": "String"
+    },
+    "Mobile": {
+      "desc": "Contact number of the agent. Used for communication, login verification, and notifications.",
+      "type": "String"
+    },
+    "Code": {
+      "desc": "Unique identifier for the agent. Used in system mapping, reporting, and integration.",
+      "type": "String"
+    },
+    "Level": {
+      "desc": "Defines the organizational hierarchy or role of the agent within the sales structure. Allowed values: 1 = Dealer Incharge (handles dealer-level operations) 2 = Sales Officer (executes field sales activities) 3 = ASM (Area Sales Manager) (manages a region/team) 4 = RSM (Regional Sales Manager) (oversees multiple areas) 5 = NSM (National Sales Manager) (manages national-level sales) 6 = Sales Director (strategic sales leadership) 7 = Managing Director (top-level executive authority).",
+      "type": "Integer"
+    },
+    "Designation": {
+      "desc": "Official job title of the agent (e.g., Sales Officer, ASM). Used for display and organizational clarity.",
+      "type": "String"
+    }
   },
   "SaveLedger": {
-    "Name": "Official name of the ledger/account (e.g., customer, supplier, bank). Used in all financial transactions and reports.",
-    "Alias": "Alternate or short name for the ledger. Useful for quick search and internal reference.",
-    "Code": "Unique identifier for the ledger. Used for system mapping, integrations, and reporting.",
-    "LedgerGroupId": "(Group) ID defining the classification of the ledger (e.g., Assets, Liabilities, Debtors). LedgerGroupId = 12 (Sundry Debtors), LedgerGroupId = 26 (Sundry Creditors)",
-    "Address": "Full address of the ledger entity. Required for billing, compliance, and reporting.",
-    "IsImportExportLedger": "Indicates whether the ledger is used for import/export transactions. Affects compliance and reporting rules.",
-    "DrCr": "Defines the default balance nature of the ledger. 1 = Debit (Dr) 2 = Credit (Cr)",
-    "CurrencyName": "Currency associated with the ledger (e.g., INR, NPR, USD). Used for multi-currency transactions.",
-    "Status": "Indicates whether the ledger is active. true = Active false = Inactive",
-    "StatutoryDetail.PanVatNo": "PAN/VAT/Tax identification number of the ledger. Required for statutory compliance and tax reporting.",
-    "File1": "Supporting document (e.g., agreement, KYC, contract). Stored against the ledger for verification and compliance."
+    "Name": {
+      "desc": "Official name of the ledger/account (e.g., customer, supplier, bank). Used in all financial transactions and reports.",
+      "type": "String"
+    },
+    "Alias": {
+      "desc": "Alternate or short name for the ledger. Useful for quick search and internal reference.",
+      "type": "String"
+    },
+    "Code": {
+      "desc": "Unique identifier for the ledger. Used for system mapping, integrations, and reporting.",
+      "type": "String"
+    },
+    "LedgerGroupId": {
+      "desc": "(Group) ID defining the classification of the ledger (e.g., Assets, Liabilities, Debtors). LedgerGroupId = 12 (Sundry Debtors), LedgerGroupId = 26 (Sundry Creditors)",
+      "type": "Integer"
+    },
+    "Address": {
+      "desc": "Full address of the ledger entity. Required for billing, compliance, and reporting.",
+      "type": "String"
+    },
+    "IsImportExportLedger": {
+      "desc": "Indicates whether the ledger is used for import/export transactions. Affects compliance and reporting rules.",
+      "type": "Boolean"
+    },
+    "DrCr": {
+      "desc": "Defines the default balance nature of the ledger. 1 = Debit (Dr) 2 = Credit (Cr)",
+      "type": "Integer"
+    },
+    "CurrencyName": {
+      "desc": "Currency associated with the ledger (e.g., INR, NPR, USD). Used for multi-currency transactions.",
+      "type": "String"
+    },
+    "Status": {
+      "desc": "Indicates whether the ledger is active. true = Active false = Inactive",
+      "type": "Boolean"
+    },
+    "StatutoryDetail.PanVatNo": {
+      "desc": "PAN/VAT/Tax identification number of the ledger. Required for statutory compliance and tax reporting.",
+      "type": "Number/String"
+    },
+    "File1": {
+      "desc": "Supporting document (e.g., agreement, KYC, contract). Stored against the ledger for verification and compliance.",
+      "type": "File"
+    }
   },
   "SaveJournal": {
-    "VoucherDate": "The date of the journal entry. Determines the accounting period and affects financial reporting.",
-    "ManualVoucherNO": "User-defined journal number. If not provided, system may auto-generate. Should be unique.",
-    "VoucherId": "Unique identifier of the journal entry. If provided \u2192 update; if not \u2192 create new entry.",
-    "RefNo": "Reference number (e.g., invoice number, external document). Used for traceability.",
-    "Narration": "Description of the journal entry explaining the purpose of the transaction. Appears in reports.",
-    "DRCR": "Indicates whether the line is Debit or Credit. 1 = Debit (Dr) 2 = Credit (Cr)",
-    "LedgerId": "Ledger/account ID where the transaction is posted. Must exist in Chart of Accounts.",
-    "DrAmount": "Debit amount for the ledger line. Should be greater than 0 only if DRCR = 1.",
-    "CrAmount": "Credit amount for the ledger line. Should be greater than 0 only if DRCR = 2.",
-    "File1": "Supporting document (e.g., bill, receipt, expense proof). Stored for audit and compliance purposes."
+    "VoucherDate": {
+      "desc": "The date of the journal entry. Determines the accounting period and affects financial reporting.",
+      "type": "Date"
+    },
+    "ManualVoucherNO": {
+      "desc": "User-defined journal number. If not provided, system may auto-generate. Should be unique.",
+      "type": "String"
+    },
+    "VoucherId": {
+      "desc": "Unique identifier of the journal entry. If provided \u2192 update; if not \u2192 create new entry.",
+      "type": "Integer"
+    },
+    "RefNo": {
+      "desc": "Reference number (e.g., invoice number, external document). Used for traceability.",
+      "type": "String"
+    },
+    "Narration": {
+      "desc": "Description of the journal entry explaining the purpose of the transaction. Appears in reports.",
+      "type": "String"
+    },
+    "DRCR": {
+      "desc": "Indicates whether the line is Debit or Credit. 1 = Debit (Dr) 2 = Credit (Cr)",
+      "type": "Integer"
+    },
+    "LedgerId": {
+      "desc": "Ledger/account ID where the transaction is posted. Must exist in Chart of Accounts.",
+      "type": "Integer"
+    },
+    "DrAmount": {
+      "desc": "Debit amount for the ledger line. Should be greater than 0 only if DRCR = 1.",
+      "type": "Decimal"
+    },
+    "CrAmount": {
+      "desc": "Credit amount for the ledger line. Should be greater than 0 only if DRCR = 2.",
+      "type": "Decimal"
+    },
+    "File1": {
+      "desc": "Supporting document (e.g., bill, receipt, expense proof). Stored for audit and compliance purposes.",
+      "type": "File"
+    }
   },
   "SaveReceipt": {
-    "VoucherName": "Type of voucher. Here it is \u201cReceipt\u201d, used to identify transaction type.",
-    "CostClassName": "Cost classification (e.g., Primary). Used for cost allocation and reporting.",
-    "AutoVoucherNo": "System-generated voucher number for internal tracking.",
-    "CurRate": "Currency exchange rate. Default = 1 for base currency.",
-    "Narration": "Line-level narration for the specific ledger entry.",
-    "VoucherDate": "Transaction date affecting accounting and reporting period.",
-    "AutoManualNo": "Manual or display voucher number (user-facing).",
-    "EntryDate": "Date when the entry is recorded in the system.",
-    "DrCr": "Debit/Credit indicator for cost allocation.",
-    "LedgerName": "Name of the ledger (e.g., Cash, Bank, Customer).",
-    "LFNO": "Ledger Folio Number (optional reference for accounting tracking).",
-    "DrAmount": "Debit amount. Used when DrCr = 1.",
-    "CrAmount": "Credit amount. Used when DrCr = 2.",
-    "CostCenterName": "Name of the cost center (e.g., department, expense head).",
-    "CrAmount / DrAmount": "Allocated amount for the cost center.",
-    "ItemDetailsCOll": "Used when receipt involves item-level adjustments (rare in receipt).",
-    "TDSVatDetailColl": "Tax-related details (TDS/VAT). Used for statutory compliance.",
-    "CheckDetails": "Cheque/payment instrument details (e.g., cheque no, bank name).",
-    "BillRefColl": "Used to adjust receipt against outstanding invoices (important for AR).",
-    "File1": "Supporting document (receipt scan, payment proof, etc.). Used for audit and compliance."
+    "VoucherName": {
+      "desc": "Type of voucher. Here it is \u201cReceipt\u201d, used to identify transaction type.",
+      "type": "String"
+    },
+    "CostClassName": {
+      "desc": "Cost classification (e.g., Primary). Used for cost allocation and reporting.",
+      "type": "String"
+    },
+    "AutoVoucherNo": {
+      "desc": "System-generated voucher number for internal tracking.",
+      "type": "Integer"
+    },
+    "CurRate": {
+      "desc": "Currency exchange rate. Default = 1 for base currency.",
+      "type": "Decimal"
+    },
+    "Narration": {
+      "desc": "Line-level narration for the specific ledger entry.",
+      "type": "String"
+    },
+    "VoucherDate": {
+      "desc": "Transaction date affecting accounting and reporting period.",
+      "type": "Date"
+    },
+    "AutoManualNo": {
+      "desc": "Manual or display voucher number (user-facing).",
+      "type": "String"
+    },
+    "EntryDate": {
+      "desc": "Date when the entry is recorded in the system.",
+      "type": "Date"
+    },
+    "DrCr": {
+      "desc": "Debit/Credit indicator for cost allocation.",
+      "type": "Integer"
+    },
+    "LedgerName": {
+      "desc": "Name of the ledger (e.g., Cash, Bank, Customer).",
+      "type": "String"
+    },
+    "LFNO": {
+      "desc": "Ledger Folio Number (optional reference for accounting tracking).",
+      "type": "String"
+    },
+    "DrAmount": {
+      "desc": "Debit amount. Used when DrCr = 1.",
+      "type": "Decimal"
+    },
+    "CrAmount": {
+      "desc": "Credit amount. Used when DrCr = 2.",
+      "type": "Decimal"
+    },
+    "CostCenterName": {
+      "desc": "Name of the cost center (e.g., department, expense head).",
+      "type": "String"
+    },
+    "CrAmount / DrAmount": {
+      "desc": "Allocated amount for the cost center.",
+      "type": "Decimal"
+    },
+    "ItemDetailsCOll": {
+      "desc": "Used when receipt involves item-level adjustments (rare in receipt).",
+      "type": "Array"
+    },
+    "TDSVatDetailColl": {
+      "desc": "Tax-related details (TDS/VAT). Used for statutory compliance.",
+      "type": "Array"
+    },
+    "CheckDetails": {
+      "desc": "Cheque/payment instrument details (e.g., cheque no, bank name).",
+      "type": "Object"
+    },
+    "BillRefColl": {
+      "desc": "Used to adjust receipt against outstanding invoices (important for AR).",
+      "type": "Array"
+    },
+    "File1": {
+      "desc": "Supporting document (receipt scan, payment proof, etc.). Used for audit and compliance.",
+      "type": "File"
+    }
   },
   "SaveProductCategories": {
-    "Name": "Name of the product category (e.g., Snacks, Beverages). Used to classify products for reporting and organization.",
-    "Alias": "Alternate or short name for the category. Useful for internal reference or UI display.",
-    "Code": "Unique identifier for the product category. Used for system mapping, integrations, and quick lookup.",
-    "ParentCategoryId": "Reference to the parent product category. Enables hierarchical structure (main category \u2192 subcategory)."
+    "Name": {
+      "desc": "Name of the product category (e.g., Snacks, Beverages). Used to classify products for reporting and organization.",
+      "type": "String"
+    },
+    "Alias": {
+      "desc": "Alternate or short name for the category. Useful for internal reference or UI display.",
+      "type": "String"
+    },
+    "Code": {
+      "desc": "Unique identifier for the product category. Used for system mapping, integrations, and quick lookup.",
+      "type": "String"
+    },
+    "ParentCategoryId": {
+      "desc": "Reference to the parent product category. Enables hierarchical structure (main category \u2192 subcategory).",
+      "type": "Integer"
+    }
   },
   "SaveProductCompany": {
-    "Name": "Official name of the product company or brand manufacturer. Used for identifying the company in product records and reports.",
-    "Code": "Unique identifier assigned to the product company. Used for system mapping, integrations, and quick lookup.",
-    "Address": "Physical or registered address of the company. Used for communication and documentation purposes.",
-    "ContactPerson": "Name of the primary contact person representing the company.",
-    "PhoneNo": "Contact number of the company or contact person. Used for communication and coordination.",
-    "Email": "Email address of the company or contact person. Used for official communication.",
-    "Website": "Official website URL of the company. Used for reference and external access to company information."
+    "Name": {
+      "desc": "Official name of the product company or brand manufacturer. Used for identifying the company in product records and reports.",
+      "type": "String"
+    },
+    "Code": {
+      "desc": "Unique identifier assigned to the product company. Used for system mapping, integrations, and quick lookup.",
+      "type": "String"
+    },
+    "Address": {
+      "desc": "Physical or registered address of the company. Used for communication and documentation purposes.",
+      "type": "String"
+    },
+    "ContactPerson": {
+      "desc": "Name of the primary contact person representing the company.",
+      "type": "String"
+    },
+    "PhoneNo": {
+      "desc": "Contact number of the company or contact person. Used for communication and coordination.",
+      "type": "String"
+    },
+    "Email": {
+      "desc": "Email address of the company or contact person. Used for official communication.",
+      "type": "String"
+    },
+    "Website": {
+      "desc": "Official website URL of the company. Used for reference and external access to company information.",
+      "type": "String"
+    }
   },
   "SaveProductGroup": {
-    "Name": "Name of the product group used to classify products at a higher level (e.g., FMCG, Electronics).",
-    "Alias": "Alternate or short name for the product group, used for internal reference or display purposes.",
-    "Code": "Unique identifier for the product group, used for system mapping and quick lookup.",
-    "ParentGroupId": "Reference to the parent product group, enabling hierarchical grouping (main group \u2192 sub-group). Represents nested product group structure."
+    "Name": {
+      "desc": "Name of the product group used to classify products at a higher level (e.g., FMCG, Electronics).",
+      "type": "String"
+    },
+    "Alias": {
+      "desc": "Alternate or short name for the product group, used for internal reference or display purposes.",
+      "type": "String"
+    },
+    "Code": {
+      "desc": "Unique identifier for the product group, used for system mapping and quick lookup.",
+      "type": "String"
+    },
+    "ParentGroupId": {
+      "desc": "Reference to the parent product group, enabling hierarchical grouping (main group \u2192 sub-group). Represents nested product group structure.",
+      "type": "Integer"
+    }
   },
   "SaveUnit": {
-    "Name": "Full name of the unit (e.g., \"Cartoon\", \"Kilogram\", \"Liter\", \"Piece\") \u2014 shown in invoices, stock reports, and item masters. Should be unique.",
-    "Alias": "Short name or symbol (e.g., \"Ctn\", \"Kg\", \"Ltr\", \"Nos\") \u2014 used for quick entry and display next to quantities. Optional.",
-    "NoOfDecimalPlaces": "Number of decimal places allowed for quantity (e.g., 0 for pieces, 2\u20133 for kg/liters). Controls input precision.",
-    "RateNoOfDecimalPlaces": "Number of decimal places allowed for rate/price per unit (usually 2\u20134). Helps with precise pricing of weight/volume items.",
-    "AmountNoOfDecimalPlaces": "Number of decimal places for total amount (Qty \u00d7 Rate). Usually 2 (matches currency like INR).",
-    "TypeOfUnit": "Type/category of unit: \u2022 1 = Quantity (default) \u2013 pieces, boxes, dozens \u2022 2 = Weight \u2013 kg, gram, ton \u2022 3 = Volume \u2013 liter, ml, cubic meter Affects default precision suggestions and reporting."
+    "Name": {
+      "desc": "Full name of the unit (e.g., \"Cartoon\", \"Kilogram\", \"Liter\", \"Piece\") \u2014 shown in invoices, stock reports, and item masters. Should be unique.",
+      "type": "String"
+    },
+    "Alias": {
+      "desc": "Short name or symbol (e.g., \"Ctn\", \"Kg\", \"Ltr\", \"Nos\") \u2014 used for quick entry and display next to quantities. Optional.",
+      "type": "String"
+    },
+    "NoOfDecimalPlaces": {
+      "desc": "Number of decimal places allowed for quantity (e.g., 0 for pieces, 2\u20133 for kg/liters). Controls input precision.",
+      "type": "Integer"
+    },
+    "RateNoOfDecimalPlaces": {
+      "desc": "Number of decimal places allowed for rate/price per unit (usually 2\u20134). Helps with precise pricing of weight/volume items.",
+      "type": "Integer"
+    },
+    "AmountNoOfDecimalPlaces": {
+      "desc": "Number of decimal places for total amount (Qty \u00d7 Rate). Usually 2 (matches currency like INR).",
+      "type": "Integer"
+    },
+    "TypeOfUnit": {
+      "desc": "Type/category of unit: \u2022 1 = Quantity (default) \u2013 pieces, boxes, dozens \u2022 2 = Weight \u2013 kg, gram, ton \u2022 3 = Volume \u2013 liter, ml, cubic meter Affects default precision suggestions and reporting.",
+      "type": "Integer"
+    }
   },
   "SaveProduct": {
-    "Name": "Name of the product. Used for identification, billing, and reporting.",
-    "Alias": "Alternate or short name for the product. Useful for quick search and display.",
-    "Code": "Unique identifier for the product. Used for system mapping and integration.",
-    "BaseUnitId": "Base unit of measurement for the product (e.g., PCS, KG). Used for stock and transactions.",
-    "ProductGroupId": "Reference to the product group under which the product is categorized.",
-    "GodownId": "Identifier of the warehouse/godown where opening stock is maintained.",
-    "Quantity": "Opening quantity of the product available in the specified godown.",
-    "UnitId": "Unit of measurement for the opening quantity.",
-    "Rate": "Selling price of the product used in sales transactions.",
-    "Amount": "Total value of opening stock (Quantity \u00d7 Rate).",
-    "ApplicableFrom": "Date from which the selling price becomes effective.",
-    "File1": "Product image file used for display in UI, catalog, or reporting."
+    "Name": {
+      "desc": "Name of the product. Used for identification, billing, and reporting.",
+      "type": "String"
+    },
+    "Alias": {
+      "desc": "Alternate or short name for the product. Useful for quick search and display.",
+      "type": "String"
+    },
+    "Code": {
+      "desc": "Unique identifier for the product. Used for system mapping and integration.",
+      "type": "String"
+    },
+    "BaseUnitId": {
+      "desc": "Base unit of measurement for the product (e.g., PCS, KG). Used for stock and transactions.",
+      "type": "Integer"
+    },
+    "ProductGroupId": {
+      "desc": "Reference to the product group under which the product is categorized.",
+      "type": "Integer"
+    },
+    "GodownId": {
+      "desc": "Identifier of the warehouse/godown where opening stock is maintained.",
+      "type": "Integer"
+    },
+    "Quantity": {
+      "desc": "Opening quantity of the product available in the specified godown.",
+      "type": "Decimal"
+    },
+    "UnitId": {
+      "desc": "Unit of measurement for the opening quantity.",
+      "type": "Integer"
+    },
+    "Rate": {
+      "desc": "Selling price of the product used in sales transactions.",
+      "type": "Decimal"
+    },
+    "Amount": {
+      "desc": "Total value of opening stock (Quantity \u00d7 Rate).",
+      "type": "Decimal"
+    },
+    "ApplicableFrom": {
+      "desc": "Date from which the selling price becomes effective.",
+      "type": "Date"
+    },
+    "File1": {
+      "desc": "Product image file used for display in UI, catalog, or reporting.",
+      "type": "File"
+    }
   },
   "SaveStockJournalOpening": {
-    "VoucherDate": "Date of the opening stock journal entry. Determines the accounting and inventory period.",
-    "ManualVoucherNO": "User-defined voucher number. If not provided, system may auto-generate.",
-    "VoucherName": "Type of voucher. Here it represents stock journal for opening inventory entries.",
-    "RefNo": "Reference number for the transaction (optional). Used for tracking and external references.",
-    "Narration": "Description or remarks for the opening stock entry.",
-    "id": "Unique identifier of the product/item.",
-    "ProductName": "Name of the product for which opening stock is recorded.",
-    "UnitName": "Unit of measurement for the product (e.g., PCS, KG).",
-    "Rate": "Cost rate per unit of the product.",
-    "ActualQty": "Actual physical quantity of stock available.",
-    "BilledQty": "Quantity considered for valuation and accounting purposes.",
-    "FreeQty": "Free quantity (if any) included in stock without cost impact.",
-    "DiscountPer": "Discount percentage applied on the item value.",
-    "DiscountAmt": "Discount amount applied on the item value.",
-    "Amount": "Total value of the stock item (based on quantity and rate after discount).",
-    "File1": "Supporting document (e.g., opening stock statement or audit file) attached for reference and compliance."
+    "VoucherDate": {
+      "desc": "Date of the opening stock journal entry. Determines the accounting and inventory period.",
+      "type": "Date"
+    },
+    "ManualVoucherNO": {
+      "desc": "User-defined voucher number. If not provided, system may auto-generate.",
+      "type": "String"
+    },
+    "VoucherName": {
+      "desc": "Type of voucher. Here it represents stock journal for opening inventory entries.",
+      "type": "String"
+    },
+    "RefNo": {
+      "desc": "Reference number for the transaction (optional). Used for tracking and external references.",
+      "type": "String"
+    },
+    "Narration": {
+      "desc": "Description or remarks for the opening stock entry.",
+      "type": "String"
+    },
+    "id": {
+      "desc": "Unique identifier of the product/item.",
+      "type": "Integer"
+    },
+    "ProductName": {
+      "desc": "Name of the product for which opening stock is recorded.",
+      "type": "String"
+    },
+    "UnitName": {
+      "desc": "Unit of measurement for the product (e.g., PCS, KG).",
+      "type": "String"
+    },
+    "Rate": {
+      "desc": "Cost rate per unit of the product.",
+      "type": "Decimal"
+    },
+    "ActualQty": {
+      "desc": "Actual physical quantity of stock available.",
+      "type": "Decimal"
+    },
+    "BilledQty": {
+      "desc": "Quantity considered for valuation and accounting purposes.",
+      "type": "Decimal"
+    },
+    "FreeQty": {
+      "desc": "Free quantity (if any) included in stock without cost impact.",
+      "type": "Decimal"
+    },
+    "DiscountPer": {
+      "desc": "Discount percentage applied on the item value.",
+      "type": "Decimal"
+    },
+    "DiscountAmt": {
+      "desc": "Discount amount applied on the item value.",
+      "type": "Decimal"
+    },
+    "Amount": {
+      "desc": "Total value of the stock item (based on quantity and rate after discount).",
+      "type": "Decimal"
+    },
+    "File1": {
+      "desc": "Supporting document (e.g., opening stock statement or audit file) attached for reference and compliance.",
+      "type": "File"
+    }
   },
   "SalesOrder": {
-    "VoucherName": "Type of voucher. Represents Sales Order transaction.",
-    "AutoVoucherNo": "System-generated voucher number for internal tracking.",
-    "CurRate": "Currency exchange rate applicable to the transaction.",
-    "Narration": "General description or remarks for the sales order.",
-    "VoucherDate": "Date of the sales order transaction.",
-    "AutoManualNo": "Manual or display voucher number.",
-    "PartyLedgerName": "Name of the customer/party placing the order.",
-    "AgentName": "Name of the sales agent associated with the order.",
-    "ProductName": "Name of the product (detailed level).",
-    "ActualQty": "Actual quantity at batch level.",
-    "BilledQty": "Billed quantity at batch level.",
-    "UnitId": "Unit of measurement for the product.",
-    "Rate": "Rate applied for the additional cost.",
-    "Amount": "Total additional cost amount.",
-    "DiscountAmt": "Discount amount applied.",
-    "DiscountPer": "Discount percentage applied.",
-    "ALUnit1": "Additional unit 1.",
-    "ALUnit2": "Additional unit 2.",
-    "ALValue1": "Value for additional unit 1.",
-    "ALValue2": "Value for additional unit 2.",
-    "VatRate": "VAT rate applied at batch level.",
-    "VatAmount": "VAT amount at batch level.",
-    "VatAbleAmt": "Taxable amount at batch level.",
-    "ExDutyRate": "Excise duty rate.",
-    "ExDutyAmount": "Excise duty amount.",
-    "Batch": "Batch number of the product.",
-    "EXPDate": "Expiry date of the product.",
-    "MFGDate": "Manufacturing date of the product.",
-    "LedgerName": "Name of the ledger for additional charges (e.g., Freight, VAT).",
-    "AccessableValue": "Base value on which the charge is calculated.",
-    "CreditDays": "Number of credit days allowed for the customer.",
-    "Buyes": "Name of the buyer/customer.",
-    "Address": "Address of the customer.",
-    "SalesTaxNo": "Tax identification number of the customer.",
-    "PhoneNo": "Contact number of the customer.",
-    "File1": "Supporting document (e.g., order document or agreement) attached to the sales order."
+    "VoucherName": {
+      "desc": "Type of voucher. Represents Sales Order transaction.",
+      "type": "String"
+    },
+    "AutoVoucherNo": {
+      "desc": "System-generated voucher number for internal tracking.",
+      "type": "Integer"
+    },
+    "CurRate": {
+      "desc": "Currency exchange rate applicable to the transaction.",
+      "type": "Decimal"
+    },
+    "Narration": {
+      "desc": "General description or remarks for the sales order.",
+      "type": "String"
+    },
+    "VoucherDate": {
+      "desc": "Date of the sales order transaction.",
+      "type": "Date"
+    },
+    "AutoManualNo": {
+      "desc": "Manual or display voucher number.",
+      "type": "String"
+    },
+    "PartyLedgerName": {
+      "desc": "Name of the customer/party placing the order.",
+      "type": "String"
+    },
+    "AgentName": {
+      "desc": "Name of the sales agent associated with the order.",
+      "type": "String"
+    },
+    "ProductName": {
+      "desc": "Name of the product (detailed level).",
+      "type": "String"
+    },
+    "ActualQty": {
+      "desc": "Actual quantity at batch level.",
+      "type": "Decimal"
+    },
+    "BilledQty": {
+      "desc": "Billed quantity at batch level.",
+      "type": "Decimal"
+    },
+    "UnitId": {
+      "desc": "Unit of measurement for the product.",
+      "type": "Integer"
+    },
+    "Rate": {
+      "desc": "Rate applied for the additional cost.",
+      "type": "Decimal"
+    },
+    "Amount": {
+      "desc": "Total additional cost amount.",
+      "type": "Decimal"
+    },
+    "DiscountAmt": {
+      "desc": "Discount amount applied.",
+      "type": "Decimal"
+    },
+    "DiscountPer": {
+      "desc": "Discount percentage applied.",
+      "type": "Decimal"
+    },
+    "ALUnit1": {
+      "desc": "Additional unit 1.",
+      "type": "String"
+    },
+    "ALUnit2": {
+      "desc": "Additional unit 2.",
+      "type": "String"
+    },
+    "ALValue1": {
+      "desc": "Value for additional unit 1.",
+      "type": "Decimal"
+    },
+    "ALValue2": {
+      "desc": "Value for additional unit 2.",
+      "type": "Decimal"
+    },
+    "VatRate": {
+      "desc": "VAT rate applied at batch level.",
+      "type": "Decimal"
+    },
+    "VatAmount": {
+      "desc": "VAT amount at batch level.",
+      "type": "Decimal"
+    },
+    "VatAbleAmt": {
+      "desc": "Taxable amount at batch level.",
+      "type": "Decimal"
+    },
+    "ExDutyRate": {
+      "desc": "Excise duty rate.",
+      "type": "Decimal"
+    },
+    "ExDutyAmount": {
+      "desc": "Excise duty amount.",
+      "type": "Decimal"
+    },
+    "Batch": {
+      "desc": "Batch number of the product.",
+      "type": "String"
+    },
+    "EXPDate": {
+      "desc": "Expiry date of the product.",
+      "type": "Date"
+    },
+    "MFGDate": {
+      "desc": "Manufacturing date of the product.",
+      "type": "Date"
+    },
+    "LedgerName": {
+      "desc": "Name of the ledger for additional charges (e.g., Freight, VAT).",
+      "type": "String"
+    },
+    "AccessableValue": {
+      "desc": "Base value on which the charge is calculated.",
+      "type": "Decimal"
+    },
+    "CreditDays": {
+      "desc": "Number of credit days allowed for the customer.",
+      "type": "Integer"
+    },
+    "Buyes": {
+      "desc": "Name of the buyer/customer.",
+      "type": "String"
+    },
+    "Address": {
+      "desc": "Address of the customer.",
+      "type": "String"
+    },
+    "SalesTaxNo": {
+      "desc": "Tax identification number of the customer.",
+      "type": "Number/String"
+    },
+    "PhoneNo": {
+      "desc": "Contact number of the customer.",
+      "type": "String"
+    },
+    "File1": {
+      "desc": "Supporting document (e.g., order document or agreement) attached to the sales order.",
+      "type": "File"
+    }
   },
   "SalesInvoice": {
-    "VoucherDate": "Date of the sales invoice transaction. Determines accounting and reporting period.",
-    "ManualVoucherNO": "User-defined invoice number. If not provided, system may auto-generate.",
-    "RefNo": "Reference number (e.g., order number or external reference).",
-    "Narration": "Description or remarks for the invoice.",
-    "PartyLedgerId": "Identifier of the customer/party ledger associated with the invoice.",
-    "Address": "Billing address of the customer.",
-    "TotalAmount": "Total invoice amount including items, taxes, and additional charges.",
-    "BranchId": "Identifier of the branch where the transaction is recorded.",
-    "ProductId": "Identifier of the product being sold.",
-    "ItemAllocationId": "Unique identifier for the item allocation line (used for update/reference).",
-    "ActualQty": "Quantity of the product sold.",
-    "Rate": "Rate applied for the charge (e.g., VAT %).",
-    "Amount": "Total amount of the additional charge or tax.",
-    "UnitId": "Unit of measurement for the product.",
-    "DiscountPer": "Discount percentage applied to the product.",
-    "DiscountAmt": "Discount amount applied to the product.",
-    "LedgerId": "Identifier of the ledger for additional charges (e.g., VAT, Discount, Freight).",
-    "Naration": "Description of the additional charge (e.g., VAT, Discount).",
-    "File1": "Supporting document (e.g., tax invoice PDF) attached for reference and compliance."
+    "VoucherDate": {
+      "desc": "Date of the sales invoice transaction. Determines accounting and reporting period.",
+      "type": "Date"
+    },
+    "ManualVoucherNO": {
+      "desc": "User-defined invoice number. If not provided, system may auto-generate.",
+      "type": "String"
+    },
+    "RefNo": {
+      "desc": "Reference number (e.g., order number or external reference).",
+      "type": "String"
+    },
+    "Narration": {
+      "desc": "Description or remarks for the invoice.",
+      "type": "String"
+    },
+    "PartyLedgerId": {
+      "desc": "Identifier of the customer/party ledger associated with the invoice.",
+      "type": "Integer/String"
+    },
+    "Address": {
+      "desc": "Billing address of the customer.",
+      "type": "String"
+    },
+    "TotalAmount": {
+      "desc": "Total invoice amount including items, taxes, and additional charges.",
+      "type": "Decimal"
+    },
+    "BranchId": {
+      "desc": "Identifier of the branch where the transaction is recorded.",
+      "type": "Integer/String"
+    },
+    "ProductId": {
+      "desc": "Identifier of the product being sold.",
+      "type": "Integer/String"
+    },
+    "ItemAllocationId": {
+      "desc": "Unique identifier for the item allocation line (used for update/reference).",
+      "type": "Integer/String"
+    },
+    "ActualQty": {
+      "desc": "Quantity of the product sold.",
+      "type": "Decimal"
+    },
+    "Rate": {
+      "desc": "Rate applied for the charge (e.g., VAT %).",
+      "type": "Decimal"
+    },
+    "Amount": {
+      "desc": "Total amount of the additional charge or tax.",
+      "type": "Decimal"
+    },
+    "UnitId": {
+      "desc": "Unit of measurement for the product.",
+      "type": "Integer/String"
+    },
+    "DiscountPer": {
+      "desc": "Discount percentage applied to the product.",
+      "type": "Decimal"
+    },
+    "DiscountAmt": {
+      "desc": "Discount amount applied to the product.",
+      "type": "Decimal"
+    },
+    "LedgerId": {
+      "desc": "Identifier of the ledger for additional charges (e.g., VAT, Discount, Freight).",
+      "type": "Integer"
+    },
+    "Naration": {
+      "desc": "Description of the additional charge (e.g., VAT, Discount).",
+      "type": "String"
+    },
+    "File1": {
+      "desc": "Supporting document (e.g., tax invoice PDF) attached for reference and compliance.",
+      "type": "File"
+    }
   },
   "SalesReturn": {
-    "VoucherName": "Type of voucher representing a sales return transaction.",
-    "RefNo": "Reference number linked to the original sales invoice or transaction.",
-    "CurrencyName": "Currency in which the transaction is recorded.",
-    "CurRate": "Exchange rate applicable to the currency.",
-    "Narration": "Remarks or description for the sales return.",
-    "VoucherDate": "Date of the sales return transaction.",
-    "PartyLedgerName": "Name of the customer/party returning the goods.",
-    "TotalAmt": "Total value of the sales return including items and additional charges.",
-    "ProductName": "Name of the product being returned.",
-    "ActualQty": "Actual quantity of the returned product.",
-    "BilledQty": "Quantity considered for billing/valuation.",
-    "UnitName": "Unit of measurement for the product.",
-    "Rate": "Rate applied for the charge or tax.",
-    "Amount": "Total amount of the charge or tax.",
-    "LedgerName": "Name of the ledger for additional charges (e.g., VAT, Excise Duty).",
-    "CreditDays": "Number of credit days applicable for the return transaction.",
-    "Buyes": "Name of the buyer/customer associated with the return.",
-    "Address": "Address of the customer.",
-    "SalesTaxNo": "Tax identification number of the customer.",
-    "PhoneNo": "Contact number of the customer.",
-    "TermsOfDelivery": "Delivery terms associated with the transaction.",
-    "Destination": "Destination location for the returned goods.",
-    "TermsOfPayment": "Payment terms related to the transaction.",
-    "OtherRefereces": "Additional references or remarks related to the return.",
-    "File1": "Supporting document (e.g., sales return invoice or proof) attached for reference and compliance."
+    "VoucherName": {
+      "desc": "Type of voucher representing a sales return transaction.",
+      "type": "String"
+    },
+    "RefNo": {
+      "desc": "Reference number linked to the original sales invoice or transaction.",
+      "type": "Number/String"
+    },
+    "CurrencyName": {
+      "desc": "Currency in which the transaction is recorded.",
+      "type": "String"
+    },
+    "CurRate": {
+      "desc": "Exchange rate applicable to the currency.",
+      "type": "Decimal"
+    },
+    "Narration": {
+      "desc": "Remarks or description for the sales return.",
+      "type": "String"
+    },
+    "VoucherDate": {
+      "desc": "Date of the sales return transaction.",
+      "type": "Date"
+    },
+    "PartyLedgerName": {
+      "desc": "Name of the customer/party returning the goods.",
+      "type": "String"
+    },
+    "TotalAmt": {
+      "desc": "Total value of the sales return including items and additional charges.",
+      "type": "Decimal"
+    },
+    "ProductName": {
+      "desc": "Name of the product being returned.",
+      "type": "String"
+    },
+    "ActualQty": {
+      "desc": "Actual quantity of the returned product.",
+      "type": "Decimal"
+    },
+    "BilledQty": {
+      "desc": "Quantity considered for billing/valuation.",
+      "type": "Decimal"
+    },
+    "UnitName": {
+      "desc": "Unit of measurement for the product.",
+      "type": "String"
+    },
+    "Rate": {
+      "desc": "Rate applied for the charge or tax.",
+      "type": "Decimal"
+    },
+    "Amount": {
+      "desc": "Total amount of the charge or tax.",
+      "type": "Decimal"
+    },
+    "LedgerName": {
+      "desc": "Name of the ledger for additional charges (e.g., VAT, Excise Duty).",
+      "type": "String"
+    },
+    "CreditDays": {
+      "desc": "Number of credit days applicable for the return transaction.",
+      "type": "Integer"
+    },
+    "Buyes": {
+      "desc": "Name of the buyer/customer associated with the return.",
+      "type": "String"
+    },
+    "Address": {
+      "desc": "Address of the customer.",
+      "type": "String"
+    },
+    "SalesTaxNo": {
+      "desc": "Tax identification number of the customer.",
+      "type": "Number/String"
+    },
+    "PhoneNo": {
+      "desc": "Contact number of the customer.",
+      "type": "String"
+    },
+    "TermsOfDelivery": {
+      "desc": "Delivery terms associated with the transaction.",
+      "type": "String"
+    },
+    "Destination": {
+      "desc": "Destination location for the returned goods.",
+      "type": "String"
+    },
+    "TermsOfPayment": {
+      "desc": "Payment terms related to the transaction.",
+      "type": "String"
+    },
+    "OtherRefereces": {
+      "desc": "Additional references or remarks related to the return.",
+      "type": "String"
+    },
+    "File1": {
+      "desc": "Supporting document (e.g., sales return invoice or proof) attached for reference and compliance.",
+      "type": "File"
+    }
   },
   "Consumption": {
-    "VoucherName": "Type of voucher representing a consumption entry.",
-    "VoucherId": "Unique identifier of the consumption voucher. Used for update/reference.",
-    "Narration": "Description or remarks for the consumption transaction.",
-    "VoucherDate": "Date of the consumption entry.",
-    "PartyLedgerName": "Name of the related party ledger (if applicable).",
-    "PartyLedgerId": "Identifier of the related party ledger (if applicable).",
-    "ProductId": "Identifier of the product being consumed.",
-    "CostCenterId": "Identifier of the cost center where the consumption is allocated.",
-    "ActualQty": "Quantity of the product consumed.",
-    "UnitId": "Unit of measurement for the product.",
-    "Rate": "Cost rate per unit of the product.",
-    "Amount": "Total cost of consumed quantity (Quantity \u00d7 Rate).",
-    "Batch": "Batch number of the product.",
-    "EXPDate": "Expiry date of the product.",
-    "MFGDate": "Manufacturing date of the product.",
-    "File1": "Supporting document (e.g., consumption report or internal record) attached for reference."
+    "VoucherName": {
+      "desc": "Type of voucher representing a consumption entry.",
+      "type": "String"
+    },
+    "VoucherId": {
+      "desc": "Unique identifier of the consumption voucher. Used for update/reference.",
+      "type": "Integer"
+    },
+    "Narration": {
+      "desc": "Description or remarks for the consumption transaction.",
+      "type": "String"
+    },
+    "VoucherDate": {
+      "desc": "Date of the consumption entry.",
+      "type": "Date"
+    },
+    "PartyLedgerName": {
+      "desc": "Name of the related party ledger (if applicable).",
+      "type": "String"
+    },
+    "PartyLedgerId": {
+      "desc": "Identifier of the related party ledger (if applicable).",
+      "type": "Integer"
+    },
+    "ProductId": {
+      "desc": "Identifier of the product being consumed.",
+      "type": "Integer"
+    },
+    "CostCenterId": {
+      "desc": "Identifier of the cost center where the consumption is allocated.",
+      "type": "Integer"
+    },
+    "ActualQty": {
+      "desc": "Quantity of the product consumed.",
+      "type": "Decimal"
+    },
+    "UnitId": {
+      "desc": "Unit of measurement for the product.",
+      "type": "Integer"
+    },
+    "Rate": {
+      "desc": "Cost rate per unit of the product.",
+      "type": "Decimal"
+    },
+    "Amount": {
+      "desc": "Total cost of consumed quantity (Quantity \u00d7 Rate).",
+      "type": "Decimal"
+    },
+    "Batch": {
+      "desc": "Batch number of the product.",
+      "type": "String"
+    },
+    "EXPDate": {
+      "desc": "Expiry date of the product.",
+      "type": "Date"
+    },
+    "MFGDate": {
+      "desc": "Manufacturing date of the product.",
+      "type": "Date"
+    },
+    "File1": {
+      "desc": "Supporting document (e.g., consumption report or internal record) attached for reference.",
+      "type": "File"
+    }
   },
   "PurchaseInvoice": {
-    "VoucherDate": "Date of the purchase invoice transaction.",
-    "ManualVoucherNO": "User-defined voucher number.",
-    "VoucherName": "Name/type of the voucher representing purchase invoice.",
-    "RefNo": "Reference number for the purchase invoice (e.g., supplier invoice number).",
-    "TotalAmount": "Total amount of the purchase invoice including items and charges.",
-    "Narration": "Description or remarks for the purchase transaction.",
-    "PartyLedgerName": "Name of the supplier/vendor associated with the purchase.",
-    "Buyes": "Name or category of the supplier.",
-    "Address": "Address of the supplier.",
-    "PhoneNo": "Contact number of the supplier.",
-    "SalesTaxNo": "Tax identification number of the supplier.",
-    "CreditDays": "Number of credit days allowed by the supplier.",
-    "DueDate": "Due date for payment of the invoice.",
-    "PaymentTermsId": "Identifier for predefined payment terms.",
-    "TermsOfDelivery": "Delivery terms associated with the purchase.",
-    "TermsOfPayment": "Payment terms agreed with the supplier.",
-    "AdvancePayment": "Amount paid in advance for the purchase.",
-    "FreightRate": "Freight or transportation rate applied.",
-    "Notes": "Additional notes or remarks related to the purchase.",
-    "id": "Identifier of the product/item.",
-    "ProductName": "Name of the product purchased.",
-    "GodownName": "Name of the warehouse/godown where items are stored.",
-    "UnitName": "Unit of measurement for the product.",
-    "Rate": "Purchase rate per unit.",
-    "ActualQty": "Actual quantity received.",
-    "BilledQty": "Quantity considered for billing.",
-    "FreeQty": "Free quantity received (if any).",
-    "DiscountPer": "Discount percentage applied.",
-    "DiscountAmt": "Discount amount applied.",
-    "Amount": "Total amount for the item (Quantity \u00d7 Rate after discount).",
-    "File1": "Supporting document (e.g., purchase bill or invoice) attached for reference and record keeping."
+    "VoucherDate": {
+      "desc": "Date of the purchase invoice transaction.",
+      "type": "Date"
+    },
+    "ManualVoucherNO": {
+      "desc": "User-defined voucher number.",
+      "type": "String"
+    },
+    "VoucherName": {
+      "desc": "Name/type of the voucher representing purchase invoice.",
+      "type": "String"
+    },
+    "RefNo": {
+      "desc": "Reference number for the purchase invoice (e.g., supplier invoice number).",
+      "type": "String"
+    },
+    "TotalAmount": {
+      "desc": "Total amount of the purchase invoice including items and charges.",
+      "type": "Decimal"
+    },
+    "Narration": {
+      "desc": "Description or remarks for the purchase transaction.",
+      "type": "String"
+    },
+    "PartyLedgerName": {
+      "desc": "Name of the supplier/vendor associated with the purchase.",
+      "type": "String"
+    },
+    "Buyes": {
+      "desc": "Name or category of the supplier.",
+      "type": "String"
+    },
+    "Address": {
+      "desc": "Address of the supplier.",
+      "type": "String"
+    },
+    "PhoneNo": {
+      "desc": "Contact number of the supplier.",
+      "type": "String"
+    },
+    "SalesTaxNo": {
+      "desc": "Tax identification number of the supplier.",
+      "type": "String"
+    },
+    "CreditDays": {
+      "desc": "Number of credit days allowed by the supplier.",
+      "type": "Integer/String"
+    },
+    "DueDate": {
+      "desc": "Due date for payment of the invoice.",
+      "type": "Date"
+    },
+    "PaymentTermsId": {
+      "desc": "Identifier for predefined payment terms.",
+      "type": "Integer/String"
+    },
+    "TermsOfDelivery": {
+      "desc": "Delivery terms associated with the purchase.",
+      "type": "String"
+    },
+    "TermsOfPayment": {
+      "desc": "Payment terms agreed with the supplier.",
+      "type": "String"
+    },
+    "AdvancePayment": {
+      "desc": "Amount paid in advance for the purchase.",
+      "type": "Decimal"
+    },
+    "FreightRate": {
+      "desc": "Freight or transportation rate applied.",
+      "type": "Decimal"
+    },
+    "Notes": {
+      "desc": "Additional notes or remarks related to the purchase.",
+      "type": "String"
+    },
+    "id": {
+      "desc": "Identifier of the product/item.",
+      "type": "Integer"
+    },
+    "ProductName": {
+      "desc": "Name of the product purchased.",
+      "type": "String"
+    },
+    "GodownName": {
+      "desc": "Name of the warehouse/godown where items are stored.",
+      "type": "String"
+    },
+    "UnitName": {
+      "desc": "Unit of measurement for the product.",
+      "type": "String"
+    },
+    "Rate": {
+      "desc": "Purchase rate per unit.",
+      "type": "Decimal"
+    },
+    "ActualQty": {
+      "desc": "Actual quantity received.",
+      "type": "Decimal"
+    },
+    "BilledQty": {
+      "desc": "Quantity considered for billing.",
+      "type": "Decimal"
+    },
+    "FreeQty": {
+      "desc": "Free quantity received (if any).",
+      "type": "Decimal"
+    },
+    "DiscountPer": {
+      "desc": "Discount percentage applied.",
+      "type": "Decimal"
+    },
+    "DiscountAmt": {
+      "desc": "Discount amount applied.",
+      "type": "Decimal"
+    },
+    "Amount": {
+      "desc": "Total amount for the item (Quantity \u00d7 Rate after discount).",
+      "type": "Decimal"
+    },
+    "File1": {
+      "desc": "Supporting document (e.g., purchase bill or invoice) attached for reference and record keeping.",
+      "type": "File"
+    }
   },
   "SaveMonthlyProjection": {
-    "LedgerId": "Identifier of the ledger (e.g., customer, distributor, or branch) for which projection is defined.",
-    "YearId": "Fiscal year identifier for the projection (e.g., Nepali fiscal year).",
-    "MonthId": "Month identifier within the fiscal year (e.g., 1\u201312).",
-    "ProductId": "Identifier of the product for which projection quantity is defined.",
-    "ProjectionQty": "Projected quantity of the product for the specified ledger, year, and month."
+    "LedgerId": {
+      "desc": "Identifier of the ledger (e.g., customer, distributor, or branch) for which projection is defined.",
+      "type": "Integer"
+    },
+    "YearId": {
+      "desc": "Fiscal year identifier for the projection (e.g., Nepali fiscal year).",
+      "type": "Integer"
+    },
+    "MonthId": {
+      "desc": "Month identifier within the fiscal year (e.g., 1\u201312).",
+      "type": "Integer"
+    },
+    "ProductId": {
+      "desc": "Identifier of the product for which projection quantity is defined.",
+      "type": "Integer"
+    },
+    "ProjectionQty": {
+      "desc": "Projected quantity of the product for the specified ledger, year, and month.",
+      "type": "Decimal"
+    }
   },
   "SaveNoOrder": {
-    "VoucherDate": "Date of the salesman visit to the outlet.",
-    "LedgerId": "Identifier of the outlet/customer ledger visited by the salesman.",
-    "Remarks": "Remarks or reason for no order during the visit.",
-    "VisitStatus": "Status of the visit (e.g., completed, not available, no order placed).",
-    "Lat": "Latitude coordinate of the visit location.",
-    "Lng": "Longitude coordinate of the visit location.",
-    "NerestLocation": "Nearest known location or landmark of the visit.",
-    "NextScheduleDateTime": "Next scheduled visit date and time for the outlet.",
-    "File1": "Image or proof of visit (e.g., outlet photo) attached for tracking and verification."
+    "VoucherDate": {
+      "desc": "Date of the salesman visit to the outlet.",
+      "type": "Date"
+    },
+    "LedgerId": {
+      "desc": "Identifier of the outlet/customer ledger visited by the salesman.",
+      "type": "Integer"
+    },
+    "Remarks": {
+      "desc": "Remarks or reason for no order during the visit.",
+      "type": "String"
+    },
+    "VisitStatus": {
+      "desc": "Status of the visit (e.g., completed, not available, no order placed).",
+      "type": "Integer"
+    },
+    "Lat": {
+      "desc": "Latitude coordinate of the visit location.",
+      "type": "Decimal"
+    },
+    "Lng": {
+      "desc": "Longitude coordinate of the visit location.",
+      "type": "Decimal"
+    },
+    "NerestLocation": {
+      "desc": "Nearest known location or landmark of the visit.",
+      "type": "String"
+    },
+    "NextScheduleDateTime": {
+      "desc": "Next scheduled visit date and time for the outlet.",
+      "type": "Date/DateTime"
+    },
+    "File1": {
+      "desc": "Image or proof of visit (e.g., outlet photo) attached for tracking and verification.",
+      "type": "File"
+    }
   },
   "Exp_Claim": {
-    "DateFrom": "Start date of the expense claim period.",
-    "DateTo": "End date of the expense claim period.",
-    "ExpenseTitle": "Title or summary of the expense claim.",
-    "ExpenseTypeId": "Identifier representing the type of expense (e.g., travel, food, lodging).",
-    "PurposeOfVisit": "Purpose of the visit or activity for which the expense is claimed.",
-    "ExpenseDate": "Date on which the expense was incurred.",
-    "ExpenseCategoryId": "Identifier of the expense category.",
-    "Quantity": "Quantity related to the expense (e.g., number of items, trips).",
-    "Rate": "Cost per unit of the expense.",
-    "Amount": "Total expense amount (Quantity \u00d7 Rate).",
-    "Description": "Description or remarks for the specific expense item.",
-    "File1": "Supporting document (e.g., expense bill or receipt image) attached for verification and record."
+    "DateFrom": {
+      "desc": "Start date of the expense claim period.",
+      "type": "Date"
+    },
+    "DateTo": {
+      "desc": "End date of the expense claim period.",
+      "type": "Date"
+    },
+    "ExpenseTitle": {
+      "desc": "Title or summary of the expense claim.",
+      "type": "String"
+    },
+    "ExpenseTypeId": {
+      "desc": "Identifier representing the type of expense (e.g., travel, food, lodging).",
+      "type": "Integer"
+    },
+    "PurposeOfVisit": {
+      "desc": "Purpose of the visit or activity for which the expense is claimed.",
+      "type": "String"
+    },
+    "ExpenseDate": {
+      "desc": "Date on which the expense was incurred.",
+      "type": "Date"
+    },
+    "ExpenseCategoryId": {
+      "desc": "Identifier of the expense category.",
+      "type": "Integer"
+    },
+    "Quantity": {
+      "desc": "Quantity related to the expense (e.g., number of items, trips).",
+      "type": "Decimal"
+    },
+    "Rate": {
+      "desc": "Cost per unit of the expense.",
+      "type": "Decimal"
+    },
+    "Amount": {
+      "desc": "Total expense amount (Quantity \u00d7 Rate).",
+      "type": "Decimal"
+    },
+    "Description": {
+      "desc": "Description or remarks for the specific expense item.",
+      "type": "String"
+    },
+    "File1": {
+      "desc": "Supporting document (e.g., expense bill or receipt image) attached for verification and record.",
+      "type": "File"
+    }
   }
 };
 
-function generateShortDesc(name, method, verbose = false) {
-  const exactOverrides = {
-    'SaveDebtorRoute': 'This API is used to create or update debtor route records, which help in organizing customers based on geographic or operational routes (commonly used in sales, delivery, and collection planning).',
-    'SaveDebtorType': 'This API is used to create or update debtor type classifications, which define how customers are categorized within the system (e.g., Distributor, Outlet, Branch).',
-    'SaveAgent': 'This API is used to create or update agent (salesperson) records, which represent employees or field staff involved in sales, distribution, and operational workflows.',
-    'SaveLedger': 'This API is used to create or update ledger (account) records within the Chart of Accounts or sub-ledgers (e.g., Customer, Vendor, Bank).',
-    'SaveJournal': 'This API is used to create or update journal entries, which record financial transactions or adjustments (e.g., expenses, accruals, corrections).',
-    'SaveReceipt': 'This API is used to record receipt transactions, i.e., money received from customers or other sources (cash/bank).',
-    'SaveProductCategories': 'This API is used to create or update product category records, supporting a hierarchical (parent-child) structure for organizing products.',
-    'SaveUnit': 'Purpose: Create or update Units of Measurement (UOM) used for stock items, invoices, and inventory tracking.',
-  };
 
-  if (exactOverrides[name]) {
-    let baseDesc = exactOverrides[name];
+// ─── Description Overrides from Excel ───────────────────────────────────────
+
+function generateShortDesc(name, method, verbose = false) {
+  const override = getApiOverride(name);
+  if (override) {
+    let baseDesc = override;
     return verbose ? `<strong>${baseDesc}</strong>` : baseDesc;
   }
 
