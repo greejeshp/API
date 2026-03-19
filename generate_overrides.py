@@ -12,9 +12,19 @@ try:
     df[0] = df[0].ffill()
     
     mapping = {}
+    
+    RENAME_MAP = {
+        'PartyLedgerId': 'PartyLedgerCode',
+        'ProductId': 'ProductName',
+        'BranchId': 'BranchCode',
+        'VoucherId': 'VoucherName'
+    }
+
     for index, row in df.iterrows():
         api_name = str(row[0]).strip()
         field_name = str(row[2]).strip()
+        field_name = RENAME_MAP.get(field_name, field_name)
+        
         desc = str(row[4]).strip()
         
         # We want the API-level description, which is in rows where field is NaN/null

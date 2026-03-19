@@ -1091,20 +1091,23 @@ function createEndpointBlock(reqItem) {
   if (formattedJson) {
     const escaped = formattedJson.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     codeHTML = `
-      <div class="section-label">Example Request Body</div>
       <div class="code-wrapper">
         <div class="code-header">
           <div class="code-header-left">
-            <span class="code-lang">JSON</span>
-            <button class="curl-btn" onclick="copyCurl(this, '${method}', '${urlRaw.replace(/\{\{URL\}\}/g, BASE_URL)}')">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 17l6-6-6-6M12 19h8"/></svg>
+            <span class="code-lang">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>
+              JSON
+            </span>
+          </div>
+          <div class="code-header-right" style="display:flex; gap:16px; align-items:center;">
+            <button class="curl-btn" onclick="copyCurl(this, '${method}', '${urlRaw.replace(/\{\{URL\}\}/g, BASE_URL)}')" style="background:none; color:var(--text-secondary); box-shadow:none; border:none; padding:0; font-size:0.75rem;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px;"><path d="M4 17l6-6-6-6M12 19h8"/></svg>
               Copy as cURL
             </button>
+            <button class="copy-btn" onclick="copyCode(this)" title="Copy JSON" style="color:var(--text-secondary); background:none; padding:4px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
           </div>
-          <button class="copy-btn" onclick="copyCode(this)">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            Copy JSON
-          </button>
         </div>
         <pre><code class="language-json">${escaped}</code></pre>
       </div>`;
@@ -1319,7 +1322,7 @@ const PUT_FIELD_OVERRIDES = {
       "desc": "User-defined invoice number. If empty, system may auto-generate. Should be unique.",
       "type": "String"
     },
-    "VoucherId": {
+    "VoucherName": {
       "desc": "Unique identifier of the invoice. If provided \u2192 update; if not \u2192 create new.",
       "type": "Integer"
     },
@@ -1331,7 +1334,7 @@ const PUT_FIELD_OVERRIDES = {
       "desc": "Additional description or remarks for the invoice. Appears in reports and print formats.",
       "type": "String"
     },
-    "PartyLedgerId": {
+    "PartyLedgerCode": {
       "desc": "Customer ledger ID. Represents the debtor account in accounting (Accounts Receivable).",
       "type": "Integer"
     },
@@ -1339,7 +1342,7 @@ const PUT_FIELD_OVERRIDES = {
       "desc": "Total invoice amount. Must match sum of all item amounts (after discount).",
       "type": "Decimal"
     },
-    "ProductId": {
+    "ProductName": {
       "desc": "Unique identifier of the product/item being sold. Must exist in product master.",
       "type": "Integer"
     },
@@ -1513,7 +1516,7 @@ const PUT_FIELD_OVERRIDES = {
       "desc": "User-defined journal number. If not provided, system may auto-generate. Should be unique.",
       "type": "String"
     },
-    "VoucherId": {
+    "VoucherName": {
       "desc": "Unique identifier of the journal entry. If provided \u2192 update; if not \u2192 create new entry.",
       "type": "Integer"
     },
@@ -1999,7 +2002,7 @@ const PUT_FIELD_OVERRIDES = {
       "desc": "Description or remarks for the invoice.",
       "type": "String"
     },
-    "PartyLedgerId": {
+    "PartyLedgerCode": {
       "desc": "Identifier of the customer/party ledger associated with the invoice.",
       "type": "Integer/String"
     },
@@ -2011,11 +2014,11 @@ const PUT_FIELD_OVERRIDES = {
       "desc": "Total invoice amount including items, taxes, and additional charges.",
       "type": "Decimal"
     },
-    "BranchId": {
+    "BranchCode": {
       "desc": "Identifier of the branch where the transaction is recorded.",
       "type": "Integer/String"
     },
-    "ProductId": {
+    "ProductName": {
       "desc": "Identifier of the product being sold.",
       "type": "Integer/String"
     },
@@ -2164,10 +2167,6 @@ const PUT_FIELD_OVERRIDES = {
   },
   "Consumption": {
     "VoucherName": {
-      "desc": "Type of voucher representing a consumption entry.",
-      "type": "String"
-    },
-    "VoucherId": {
       "desc": "Unique identifier of the consumption voucher. Used for update/reference.",
       "type": "Integer"
     },
@@ -2183,11 +2182,11 @@ const PUT_FIELD_OVERRIDES = {
       "desc": "Name of the related party ledger (if applicable).",
       "type": "String"
     },
-    "PartyLedgerId": {
+    "PartyLedgerCode": {
       "desc": "Identifier of the related party ledger (if applicable).",
       "type": "Integer"
     },
-    "ProductId": {
+    "ProductName": {
       "desc": "Identifier of the product being consumed.",
       "type": "Integer"
     },
@@ -2367,7 +2366,7 @@ const PUT_FIELD_OVERRIDES = {
       "desc": "Month identifier within the fiscal year (e.g., 1\u201312).",
       "type": "Integer"
     },
-    "ProductId": {
+    "ProductName": {
       "desc": "Identifier of the product for which projection quantity is defined.",
       "type": "Integer"
     },

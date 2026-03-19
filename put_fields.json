@@ -12,7 +12,7 @@
       "desc": "User-defined invoice number. If empty, system may auto-generate. Should be unique.",
       "type": "String"
     },
-    "VoucherId": {
+    "VoucherName": {
       "desc": "Unique identifier of the invoice. If provided → update; if not → create new.",
       "type": "Integer"
     },
@@ -24,7 +24,7 @@
       "desc": "Additional description or remarks for the invoice. Appears in reports and print formats.",
       "type": "String"
     },
-    "PartyLedgerId": {
+    "PartyLedgerCode": {
       "desc": "Customer ledger ID. Represents the debtor account in accounting (Accounts Receivable).",
       "type": "Integer"
     },
@@ -32,7 +32,7 @@
       "desc": "Total invoice amount. Must match sum of all item amounts (after discount).",
       "type": "Decimal"
     },
-    "ProductId": {
+    "ProductName": {
       "desc": "Unique identifier of the product/item being sold. Must exist in product master.",
       "type": "Integer"
     },
@@ -206,7 +206,7 @@
       "desc": "User-defined journal number. If not provided, system may auto-generate. Should be unique.",
       "type": "String"
     },
-    "VoucherId": {
+    "VoucherName": {
       "desc": "Unique identifier of the journal entry. If provided → update; if not → create new entry.",
       "type": "Integer"
     },
@@ -692,7 +692,7 @@
       "desc": "Description or remarks for the invoice.",
       "type": "String"
     },
-    "PartyLedgerId": {
+    "PartyLedgerCode": {
       "desc": "Identifier of the customer/party ledger associated with the invoice.",
       "type": "Integer/String"
     },
@@ -704,11 +704,11 @@
       "desc": "Total invoice amount including items, taxes, and additional charges.",
       "type": "Decimal"
     },
-    "BranchId": {
+    "BranchCode": {
       "desc": "Identifier of the branch where the transaction is recorded.",
       "type": "Integer/String"
     },
-    "ProductId": {
+    "ProductName": {
       "desc": "Identifier of the product being sold.",
       "type": "Integer/String"
     },
@@ -857,10 +857,6 @@
   },
   "Consumption": {
     "VoucherName": {
-      "desc": "Type of voucher representing a consumption entry.",
-      "type": "String"
-    },
-    "VoucherId": {
       "desc": "Unique identifier of the consumption voucher. Used for update/reference.",
       "type": "Integer"
     },
@@ -876,11 +872,11 @@
       "desc": "Name of the related party ledger (if applicable).",
       "type": "String"
     },
-    "PartyLedgerId": {
+    "PartyLedgerCode": {
       "desc": "Identifier of the related party ledger (if applicable).",
       "type": "Integer"
     },
-    "ProductId": {
+    "ProductName": {
       "desc": "Identifier of the product being consumed.",
       "type": "Integer"
     },
@@ -1060,7 +1056,7 @@
       "desc": "Month identifier within the fiscal year (e.g., 1–12).",
       "type": "Integer"
     },
-    "ProductId": {
+    "ProductName": {
       "desc": "Identifier of the product for which projection quantity is defined.",
       "type": "Integer"
     },

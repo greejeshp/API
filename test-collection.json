@@ -78,7 +78,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\"VoucherName\": \"SalesInvoice\", \"Narration\": \"4% DISCOUNT\", \"VoucherDate\": \"2024-04-04\", \"PartyLedgerId\": \"68\", \"RefNo\": \"SBD-01270\", \"ItemAllocationColl\": [{\"ProductId\": 55, \"ActualQty\": 60, \"Rate\": 43.88, \"Amount\": 2632.80}], \"SalesInvoiceDetail\": {\"Buyes\": \"MEGA MART PVT.LTD\", \"Address\": \"KATHMANDU\", \"SalesTaxNo\": \"303408110\"}}"
+              "raw": "{\"VoucherName\": \"SalesInvoice\", \"Narration\": \"4% DISCOUNT\", \"VoucherDate\": \"2024-04-04\", \"PartyLedgerCode\": \"68\", \"RefNo\": \"SBD-01270\", \"ItemAllocationColl\": [{\"ProductName\": 55, \"ActualQty\": 60, \"Rate\": 43.88, \"Amount\": 2632.80}], \"SalesInvoiceDetail\": {\"Buyes\": \"MEGA MART PVT.LTD\", \"Address\": \"KATHMANDU\", \"SalesTaxNo\": \"303408110\"}}"
             }
           }
         }

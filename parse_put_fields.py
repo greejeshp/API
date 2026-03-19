@@ -13,12 +13,21 @@ df[0] = df[0].ffill()
 
 mapping = {}
 
+RENAME_MAP = {
+    'PartyLedgerId': 'PartyLedgerCode',
+    'ProductId': 'ProductName',
+    'BranchId': 'BranchCode',
+    'VoucherId': 'VoucherName'
+}
+
 for index, row in df.iterrows():
     api_name = str(row[0]).strip()
     if api_name == 'nan' or 'API Name' in api_name or 'nan' == str(row[2]):
         continue
     
     field_name = str(row[2]).strip()
+    field_name = RENAME_MAP.get(field_name, field_name)
+    
     field_type = str(row[3]).strip()
     description = str(row[4]).strip()
     
