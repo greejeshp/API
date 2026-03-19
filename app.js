@@ -140,6 +140,19 @@ function showToast(message) {
   setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
+/**
+ * Sorts an array of Postman items by HTTP method priority:
+ * GET > PUT > POST > DELETE
+ */
+function sortEndpointsByMethod(endpoints) {
+  const priority = { 'GET': 1, 'PUT': 2, 'POST': 3, 'DELETE': 4 };
+  return [...endpoints].sort((a, b) => {
+    const ma = (a.request?.method || 'GET').toUpperCase();
+    const mb = (b.request?.method || 'GET').toUpperCase();
+    return (priority[ma] || 99) - (priority[mb] || 99);
+  });
+}
+
 function matchEndpointToEntity(endpointName) {
   const key = endpointName.toLowerCase().replace(/[\s_-]/g, '');
   for (const mapping of ENTITY_MAP) {
@@ -635,6 +648,14 @@ We don't currently enforce strict rate limits. That said, please batch your requ
   // ── Build entity buckets ──
   const { entityBuckets, extraFolders } = buildEntityBuckets(data.item);
 
+  // Apply sorting by method to every bucket and extra folder
+  Object.values(entityBuckets).forEach(bucket => {
+    bucket.endpoints = sortEndpointsByMethod(bucket.endpoints);
+  });
+  Object.keys(extraFolders).forEach(key => {
+    extraFolders[key] = sortEndpointsByMethod(extraFolders[key]);
+  });
+
   // ── Build sidebar ──
   buildSidebar(entityBuckets, extraFolders, navContainer);
 
@@ -707,23 +728,33 @@ function renderEndpointsSummary(entityBuckets, extraFolders, container) {
 
   // Build rows per module
   const buildModuleRows = (moduleName) => {
-    return ENTITY_ORDER
-      .filter(en => entityBuckets[en]?.module === moduleName && entityBuckets[en].endpoints.length)
-      .flatMap(en => {
-        const bucket = entityBuckets[en];
-        return bucket.endpoints.map(ep => {
-          const method = ep.request?.method || 'GET';
-          const url = ep.request?.url?.raw || ep.request?.url || '—';
-          const mc = getMethodColorClass(method);
-          const desc = generateShortDesc(ep.name, method);
-          return `<tr>
-            <td><a href="#${ep._endpointId}" class="sum-ep-link">${ep.name}</a></td>
-            <td><span class="method-badge ${mc}-bg" style="font-size:0.6rem;padding:2px 7px">${method}</span></td>
-            <td class="sum-url">${url.replace(/\{\{URL\}\}/g, BASE_URL)}</td>
-            <td class="sum-desc">${desc}</td>
-          </tr>`;
-        });
-      }).join('');
+    // 1. Collect all endpoints for this module across all entities
+    const endpoints = ENTITY_ORDER
+      .filter(en => entityBuckets[en]?.module === moduleName)
+      .flatMap(en => entityBuckets[en].endpoints);
+    
+    // 2. Add "Other" endpoints for this module
+    const otherKey = `${moduleName} (Other)`;
+    if (extraFolders[otherKey]) {
+      endpoints.push(...extraFolders[otherKey]);
+    }
+
+    // 3. Sort the combined list by method
+    const sorted = sortEndpointsByMethod(endpoints);
+    
+    // 4. Map to rows
+    return sorted.map(ep => {
+      const method = ep.request?.method || 'GET';
+      const url = ep.request?.url?.raw || ep.request?.url || '—';
+      const mc = getMethodColorClass(method);
+      const desc = generateShortDesc(ep.name, method);
+      return `<tr>
+        <td><a href="#${ep._endpointId}" class="sum-ep-link">${ep.name}</a></td>
+        <td><span class="method-badge ${mc}-bg" style="font-size:0.6rem;padding:2px 7px">${method}</span></td>
+        <td class="sum-url">${url.replace(/\{\{URL\}\}/g, BASE_URL)}</td>
+        <td class="sum-desc">${desc}</td>
+      </tr>`;
+    }).join('');
   };
 
   const buildExtraRows = (folderName, endpoints) => endpoints.map(ep => {
