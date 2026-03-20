@@ -525,7 +525,7 @@ function renderDocumentation(data) {
   const xeroDescription = `
 # Introduction
 
-Welcome to the **Pivotal ERP API**. You can use this REST API to connect your own applications with our core accounting, inventory, and reporting systems.
+Welcome to the **Dynamic ERP API**. You can use this REST API to connect your own applications with our core accounting, inventory, and reporting systems.
 
 # Core Entities
 
@@ -568,19 +568,19 @@ We don't currently enforce strict rate limits. That said, please batch your requ
   document.getElementById('intro-section').innerHTML = `
     <div class="intro-hero">
       <div class="intro-badge">API Reference</div>
-      <h1>${data.info.name || 'Pivotal ERP API'}</h1>
-      <p class="intro-subtitle">Documentation for integrating with Pivotal ERP's accounting and inventory modules.</p>
+      <h1>${data.info.name || 'Dynamic ERP API'}</h1>
+      <p class="intro-subtitle">Documentation for integrating with Dynamic ERP's accounting and inventory modules.</p>
     </div>
     <div class="markdown-body" id="overview-intro">
       <h1 id="overview-intro-h">Getting Started</h1>
-      <p>This API lets you read and write data directly into Pivotal ERP. We use standard HTTP requests and JSON.</p>
+      <p>This API lets you read and write data directly into Dynamic ERP. We use standard HTTP requests and JSON.</p>
 
       <h3>Base URL</h3>
       <p>Point all your requests here:</p>
       <div class="code-wrapper"><pre><code>https://api.pivotalerp.com/v1</code></pre></div>
 
       <h2 id="overview-entities">Entity Framework</h2>
-      <p>Data in Pivotal ERP is organized into modules. Most entities support standard create, read, update, and delete actions.</p>
+      <p>Data in Dynamic ERP is organized into modules. Most entities support standard create, read, update, and delete actions.</p>
       <table><thead><tr><th>Module</th><th>Key Entities</th><th>What it's for</th></tr></thead><tbody>
         <tr><td><strong>Account</strong></td><td>Ledgers, Journals, Receipts</td><td>Financials, tracking payments, and chart of accounts.</td></tr>
         <tr><td><strong>Inventory</strong></td><td>Products, Invoices, Orders</td><td>Stock, sales, and purchasing.</td></tr>
