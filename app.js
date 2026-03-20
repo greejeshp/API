@@ -1,5 +1,5 @@
 /**
- * Pivotal ERP API Documentation — Enhanced Rendering Logic
+ * Dynamic ERP API Documentation — Enhanced Rendering Logic
  * Entity-grouped navigation with collapsible sidebar, Xero-style descriptions.
  * Last Updated: 2026-03-17 17:05
  */
@@ -762,7 +762,7 @@ function renderEndpointsSummary(entityBuckets, extraFolders, container) {
       return `<tr>
         <td><a href="#${ep._endpointId}" class="sum-ep-link">${ep.name}</a></td>
         <td><span class="method-badge ${mc}-bg" style="font-size:0.6rem;padding:2px 7px">${method}</span></td>
-        <td class="sum-url">${url.replace(/\{\{URL\}\}/g, BASE_URL)}</td>
+        <td class="sum-url">${url.replace(BASE_URL, "{{URL}}")}</td>
         <td class="sum-desc">${desc}</td>
       </tr>`;
     }).join('');
@@ -776,7 +776,7 @@ function renderEndpointsSummary(entityBuckets, extraFolders, container) {
     return `<tr>
       <td><a href="#${ep._endpointId}" class="sum-ep-link">${ep.name}</a></td>
       <td><span class="method-badge ${mc}-bg" style="font-size:0.6rem;padding:2px 7px">${method}</span></td>
-      <td class="sum-url">${url.replace(/\{\{URL\}\}/g, BASE_URL)}</td>
+      <td class="sum-url">${url.replace(BASE_URL, "{{URL}}")}</td>
       <td class="sum-desc">${desc}</td>
     </tr>`;
   }).join('');
@@ -1122,7 +1122,7 @@ function createEndpointBlock(reqItem) {
         </div>
         <div class="url-block">
           <span class="method-badge ${methodCls}-bg">${method}</span>
-          <span class="url-path">${urlRaw}</span>
+          <span class="url-path">${urlRaw.replace(BASE_URL, "{{URL}}")}</span>
         </div>
         <div class="markdown-body card-desc">
           ${finalDescHTML}

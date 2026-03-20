@@ -1,7 +1,7 @@
-﻿window.defaultPostmanData = {
+window.defaultPostmanData = {
   "info": {
     "_postman_id": "597d19a0-fe33-48e1-ae4b-46de9e08a1b7",
-    "name": "Pivotal ERP Accounting",
+    "name": "Dynamic ERP Accounting",
     "description": "# Introduction\n\nWhat does your API do?\n\n# Overview\n\nThings that the developers should know about\n\n# Authentication\n\nWhat is the preferred way of using the API?\n\n# Error Codes\n\nWhat errors and status codes can a user expect?\n\n# Rate limit\n\nIs there a limit to the number of requests an user can send?",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "14035817"
