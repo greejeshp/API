@@ -1122,7 +1122,7 @@ function createEndpointBlock(reqItem) {
         </div>
         <div class="url-block">
           <span class="method-badge ${methodCls}-bg">${method}</span>
-          <span class="url-path">${urlRaw.replace(/\{\{URL\}\}/g, BASE_URL)}</span>
+          <span class="url-path">${urlRaw}</span>
         </div>
         <div class="markdown-body card-desc">
           ${finalDescHTML}
