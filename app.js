@@ -1135,12 +1135,12 @@ function createEndpointBlock(reqItem) {
   `;
 }
 
-function buildParamsTable(obj, parentId = '', rootName = "Request Body Parameters", level = 0, endpointName = '') {
+function buildParamsTable(obj, parentId = '', rootName = "Request Body Parameters", level = 0, endpointName = '', pathPrefix = '') {
   if (typeof obj !== 'object' || obj === null) return '';
   
   if (Array.isArray(obj)) {
     if (obj.length > 0 && typeof obj[0] === 'object' && obj[0] !== null) {
-      return buildParamsTable(obj[0], parentId, `${rootName} (Array of Objects)`, level, endpointName);
+      return buildParamsTable(obj[0], parentId, `${rootName} (Array of Objects)`, level, endpointName, pathPrefix);
     }
     return '';
   }
@@ -1169,7 +1169,8 @@ function buildParamsTable(obj, parentId = '', rootName = "Request Body Parameter
         type = fieldOverride.type.toLowerCase();
     }
     
-    let desc = generateFieldDesc(k, endpointName);
+    const fieldPath = pathPrefix ? `${pathPrefix}.${k}` : k;
+    let desc = generateFieldDesc(fieldPath, endpointName);
     
     if (v !== undefined) {
       if (type === 'array') {
@@ -1177,7 +1178,7 @@ function buildParamsTable(obj, parentId = '', rootName = "Request Body Parameter
           const subId = `${parentId}-${k}`;
           display = `<a href="#${subId}" class="sum-ep-link" style="text-decoration:underline;color:var(--xero-blue)">See ${k}</a>`;
           desc = `Collection of ${k} elements.`;
-          subTables.push({ key: k, data: v[0], type: 'array', subId });
+          subTables.push({ key: k, data: v[0], type: 'array', subId, path: fieldPath });
         } else {
           display = `<span class="muted">[array]</span>`;
         }
@@ -1185,7 +1186,7 @@ function buildParamsTable(obj, parentId = '', rootName = "Request Body Parameter
         const subId = `${parentId}-${k}`;
         display = `<a href="#${subId}" class="sum-ep-link" style="text-decoration:underline;color:var(--xero-blue)">See ${k}</a>`;
         desc = `Detailed ${k} object.`;
-        subTables.push({ key: k, data: v, type: 'object', subId });
+        subTables.push({ key: k, data: v, type: 'object', subId, path: fieldPath });
       } else {
         display = String(v);
         // specific user request: blank out example values for Get Ledger Group List
@@ -1212,7 +1213,7 @@ function buildParamsTable(obj, parentId = '', rootName = "Request Body Parameter
   // Render nested tables immediately below
   for (const sub of subTables) {
     const subTitle = sub.type === 'array' ? `${sub.key} (Array Item)` : `${sub.key} (Object)`;
-    html += buildParamsTable(sub.data, sub.subId, subTitle, level + 1, endpointName);
+    html += buildParamsTable(sub.data, sub.subId, subTitle, level + 1, endpointName, sub.path);
   }
   
   return html;
@@ -1497,6 +1498,10 @@ const PUT_FIELD_OVERRIDES = {
     "Status": {
       "desc": "Indicates whether the ledger is active. true = Active false = Inactive",
       "type": "Boolean"
+    },
+    "StatutoryDetail.LedgerId": {
+      "desc": "Unique identifier for the statutory detail record linked to the ledger.",
+      "type": "Integer"
     },
     "StatutoryDetail.PanVatNo": {
       "desc": "PAN/VAT/Tax identification number of the ledger. Required for statutory compliance and tax reporting.",

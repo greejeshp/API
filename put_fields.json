@@ -188,6 +188,10 @@
       "desc": "Indicates whether the ledger is active. true = Active false = Inactive",
       "type": "Boolean"
     },
+    "StatutoryDetail.LedgerId": {
+      "desc": "Unique identifier for the statutory detail record linked to the ledger.",
+      "type": "Integer"
+    },
     "StatutoryDetail.PanVatNo": {
       "desc": "PAN/VAT/Tax identification number of the ledger. Required for statutory compliance and tax reporting.",
       "type": "Number/String"

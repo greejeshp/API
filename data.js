@@ -2968,44 +2968,6 @@ window.defaultPostmanData = {
           "response": []
         },
         {
-          "name": "AddSalesInvoice",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n  \"VoucherName\": \"SalesInvoice\",\r\n  \"Narration\": \"4%DISCOUNT\",\r\n  \"VoucherDate\": \"2024-04-04 00:00:00.000\",\r\n  \"PartyLedgerCode\": \"68\",  \r\n  \"RefNo\":\"SBD-01270\",\r\n  \"Api_ResponseId\":\"SBD-01270\",\r\n  \"ItemAllocationColl\": [\r\n    {\r\n      \"ProductName\": 55,\r\n      \"ActualQty\": 60.000000,    \r\n      \"Rate\": 43.880000,\r\n      \"Amount\": 2632.800000 \r\n    }\r\n  ],\r\n  \"SalesInvoiceDetail\": {    \r\n    \"Buyes\": \"MEGA MART PVT.LTD- LAZIMPAT\",\r\n    \"Address\": \"LAZIMPAT- KATHMANDU\",\r\n    \"SalesTaxNo\": 303408110    \r\n  }\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{URL}}/v1/Inventory/AddSalesInvoice",
-              "host": [
-                "{{URL}}"
-              ],
-              "path": [
-                "v1",
-                "Inventory",
-                "AddSalesInvoice"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
           "name": "BillWiseAgeing",
           "request": {
             "auth": {
